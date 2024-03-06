@@ -9,6 +9,7 @@ uvicorn = "*"
 firebase-admin = "*"
 pyrebase4 = "*"
 requests = "*"
+typing-extensions = "*"
 
 [dev-packages]
 
