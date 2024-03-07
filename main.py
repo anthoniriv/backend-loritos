@@ -1,13 +1,24 @@
 import uvicorn
 import pyrebase
 import uuid
-from fastapi import FastAPI
-from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest, EditStudentRequest, DeleteStudentRequest, GetStudentDataRequest
+from fastapi import FastAPI, Depends
+from models import (
+    LoginSchema,
+    SingUpSchema,
+    SearchTeacherSchema,
+    GetContent,
+    AddStudentRequest,
+    EditStudentRequest,
+    DeleteStudentRequest,
+    GetStudentDataRequest,
+    ChangePasswordRequest,
+)
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 
 app = FastAPI(
     description="This is a loritos backend", title="LoritosBackend", docs_url="/"
@@ -44,13 +55,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
 @app.post("/singup")
 async def create_account(user_data: SingUpSchema):
+    name = user_data.name
+    last_name = user_data.lastName
     email = user_data.email
     password = user_data.password
 
     try:
+        # Crear usuario en Firebase Authentication
         user = auth.create_user(email=email, password=password)
+
+        # Crear documento en la colección tDash_teacherData
+        teacher_data = {
+            "id": user.uid,
+            "name": name,
+            "lastname": last_name,
+            "email": email,
+            "password": password,
+            "lstClasses": [],
+            "lstStudents": [],
+        }
+
+        # Agregar el documento a la colección
+        db.collection("tDash_teacherData").document(user.uid).set(teacher_data)
 
         return JSONResponse(
             content={"message": f"Cuenta creada correctamente para usuario {user.uid}"},
@@ -60,6 +91,11 @@ async def create_account(user_data: SingUpSchema):
         raise HTTPException(
             status_code=400,
             detail=f"Esta cuenta ya existe actualmente para el email {email}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear cuenta y documento de profesor: {str(e)}",
         )
 
 
@@ -91,12 +127,42 @@ async def validate_token(request: Request):
 
     user = auth.verify_id_token(jwt)
 
-    return user["user_id"]
+    return JSONResponse(content={"userId": user["user_id"]}, status_code=200)
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        user = auth.verify_id_token(token)
+        return user
+    except auth.ExpiredIdTokenError:
+        raise HTTPException(status_code=401, detail="Token de autenticación expirado")
+    except auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Token de autenticación inválido")
 
 
 @app.post("/dashboard/teacher/changePassword")
-async def change_teacher_password():
-    pass
+async def change_teacher_password(
+    password_data: ChangePasswordRequest, current_user: dict = Depends(get_current_user)
+):
+    try:
+        # Verificar la contraseña actual del usuario
+        email = current_user.get("email")
+        auth.verify_password(
+            email=email, password=password_data.current_password
+        )
+
+        # Cambiar la contraseña del usuario
+        auth.update_user(
+            uid=current_user.get("user_id"), password=password_data.new_password
+        )
+
+        return JSONResponse(
+            content={"message": "Contraseña cambiada exitosamente"}, status_code=200
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al cambiar la contraseña: {str(e)}"
+        )
 
 
 @app.post("/dashboard/teacher/getData")
@@ -212,7 +278,8 @@ async def add_new_student(student_data: AddStudentRequest):
     try:
         if not student_data.names:
             raise HTTPException(
-                status_code=400, detail="Se requiere al menos un nombre en los datos del estudiante"
+                status_code=400,
+                detail="Se requiere al menos un nombre en los datos del estudiante",
             )
 
         for name in student_data.names:
@@ -228,22 +295,25 @@ async def add_new_student(student_data: AddStudentRequest):
                 "name": name,
                 "avatarCode": 1,  # Puedes ajustar este valor según tus necesidades
                 "currentCoins": 0,
-                "className" : "",
+                "className": "",
                 "totalCoinsWin": 0,
                 "dateAdded": current_time,
                 "lastConnection": current_time,
-                "lstProgress": []  # Puedes ajustar este valor según tus necesidades
+                "lstProgress": [],  # Puedes ajustar este valor según tus necesidades
             }
 
             # Insertar el estudiante en la colección
             db.collection("tDash_students").add(new_student_data)
 
-        return JSONResponse(content={"message": "Estudiantes agregados exitosamente"}, status_code=201)
+        return JSONResponse(
+            content={"message": "Estudiantes agregados exitosamente"}, status_code=201
+        )
 
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al agregar estudiantes: {str(e)}"
         )
+
 
 @app.post("/dashboard/students/getStudentData")
 async def get_student_data(request_data: GetStudentDataRequest):
@@ -266,14 +336,14 @@ async def get_student_data(request_data: GetStudentDataRequest):
             return JSONResponse(content={"data": student_data}, status_code=200)
         else:
             raise HTTPException(
-                status_code=404,
-                detail=f"Estudiante con ID {student_id} no encontrado"
+                status_code=404, detail=f"Estudiante con ID {student_id} no encontrado"
             )
 
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al obtener datos del estudiante: {str(e)}"
         )
+
 
 @app.post("/dashboard/students/edit")
 async def edit_student(student_data: EditStudentRequest):
@@ -303,17 +373,20 @@ async def edit_student(student_data: EditStudentRequest):
 
             students_collection.document(student_docs[0].id).update(update_data)
 
-            return JSONResponse(content={"message": "Estudiante actualizado exitosamente"}, status_code=200)
+            return JSONResponse(
+                content={"message": "Estudiante actualizado exitosamente"},
+                status_code=200,
+            )
         else:
             raise HTTPException(
-                status_code=404,
-                detail=f"Estudiante con ID {student_id} no encontrado"
+                status_code=404, detail=f"Estudiante con ID {student_id} no encontrado"
             )
 
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al actualizar estudiante: {str(e)}"
         )
+
 
 @app.post("/dashboard/students/getProgress")
 async def get_progress_student():
@@ -334,11 +407,13 @@ async def delete_student(delete_data: DeleteStudentRequest):
         if student_docs:
             students_collection.document(student_docs[0].id).delete()
 
-            return JSONResponse(content={"message": "Estudiante eliminado exitosamente"}, status_code=200)
+            return JSONResponse(
+                content={"message": "Estudiante eliminado exitosamente"},
+                status_code=200,
+            )
         else:
             raise HTTPException(
-                status_code=404,
-                detail=f"Estudiante con ID {student_id} no encontrado"
+                status_code=404, detail=f"Estudiante con ID {student_id} no encontrado"
             )
 
     except Exception as e:

@@ -3,28 +3,18 @@ from typing import List, Optional
 from datetime import datetime
 
 class SingUpSchema(BaseModel):
+    name:str
+    lastName:str
     email:str
     password:str
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "email": "example@example.com",
-                "password": "password123"
-            }
-        }
 
 class LoginSchema(BaseModel):
     email:str
     password:str
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "email": "example@example.com",
-                "password": "password123"
-            }
-        }
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 class SearchTeacherSchema(BaseModel):
     teacherID: str
