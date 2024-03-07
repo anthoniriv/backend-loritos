@@ -50,3 +50,6 @@ class EditStudentRequest(BaseModel):
 
 class DeleteStudentRequest(BaseModel):
     id: str
+
+class GetStudentDataRequest(BaseModel):
+    student_id: str

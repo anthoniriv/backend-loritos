@@ -2,7 +2,7 @@ import uvicorn
 import pyrebase
 import uuid
 from fastapi import FastAPI
-from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest, EditStudentRequest, DeleteStudentRequest
+from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest, EditStudentRequest, DeleteStudentRequest, GetStudentDataRequest
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -245,6 +245,31 @@ async def add_new_student(student_data: AddStudentRequest):
             status_code=500, detail=f"Error al agregar estudiantes: {str(e)}"
         )
 
+@app.post("/dashboard/students/getStudentData")
+async def get_student_data(request_data: GetStudentDataRequest):
+    try:
+        student_id = request_data.student_id
+
+        students_collection = db.collection("tDash_students")
+
+        query = students_collection.where("id", "==", student_id).limit(1)
+        query_result = query.stream()
+
+        student_docs = list(query_result)
+        if student_docs:
+            student_data = student_docs[0].to_dict()
+
+            return JSONResponse(content={"data": student_data}, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Estudiante con ID {student_id} no encontrado"
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al obtener datos del estudiante: {str(e)}"
+        )
 
 @app.post("/dashboard/students/edit")
 async def edit_student(student_data: EditStudentRequest):
