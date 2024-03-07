@@ -250,17 +250,26 @@ async def get_student_data(request_data: GetStudentDataRequest):
     try:
         student_id = request_data.student_id
 
+        # Obtener la colección
         students_collection = db.collection("tDash_students")
 
+        # Consultar estudiantes con el mismo valor en el campo 'id'
         query = students_collection.where("id", "==", student_id).limit(1)
         query_result = query.stream()
 
+        # Verificar si se encontró algún estudiante
         student_docs = list(query_result)
         if student_docs:
+            # Obtener los datos del estudiante
             student_data = student_docs[0].to_dict()
+
+            # Convertir lastConnection a formato ISO 8601 antes de devolver la respuesta JSON
+            if "lastConnection" in student_data:
+                student_data["lastConnection"] = student_data["lastConnection"].isoformat()
 
             return JSONResponse(content={"data": student_data}, status_code=200)
         else:
+            # Si no se encontró ningún estudiante con el campo 'id' proporcionado
             raise HTTPException(
                 status_code=404,
                 detail=f"Estudiante con ID {student_id} no encontrado"
