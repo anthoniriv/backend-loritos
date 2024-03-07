@@ -228,7 +228,9 @@ async def add_new_student(student_data: AddStudentRequest):
                 "name": name,
                 "avatarCode": 1,  # Puedes ajustar este valor según tus necesidades
                 "currentCoins": 0,
+                "className" : "",
                 "totalCoinsWin": 0,
+                "dateAdded": current_time,
                 "lastConnection": current_time,
                 "lstProgress": []  # Puedes ajustar este valor según tus necesidades
             }
