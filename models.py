@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 class SingUpSchema(BaseModel):
     email:str
@@ -33,3 +34,19 @@ class GetContent(BaseModel):
 
 class AddStudentRequest(BaseModel):
     names: List[str]
+
+class EditStudentRequest(BaseModel):
+    id: str
+    name: Optional[str] = None
+    avatarCode: Optional[int] = None
+    currentCoins: Optional[int] = None
+    totalCoinsWin: Optional[int] = None
+    lastConnection: Optional[datetime] = None
+    lstProgress: Optional[List[str]] = None
+
+    class Config:
+        orm_mode = True
+        pre = True
+
+class DeleteStudentRequest(BaseModel):
+    id: str

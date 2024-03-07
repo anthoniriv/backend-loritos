@@ -2,7 +2,7 @@ import uvicorn
 import pyrebase
 import uuid
 from fastapi import FastAPI
-from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest
+from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest, EditStudentRequest, DeleteStudentRequest
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -245,9 +245,44 @@ async def add_new_student(student_data: AddStudentRequest):
 
 
 @app.post("/dashboard/students/edit")
-async def edit_student():
-    pass
+async def edit_student(student_data: EditStudentRequest):
+    try:
+        student_id = student_data.id
 
+        students_collection = db.collection("tDash_students")
+
+        query = students_collection.where("id", "==", student_id).limit(1)
+        query_result = query.stream()
+
+        student_docs = list(query_result)
+        if student_docs:
+            update_data = {}
+            if student_data.name is not None:
+                update_data["name"] = student_data.name
+            if student_data.avatarCode is not None:
+                update_data["avatarCode"] = student_data.avatarCode
+            if student_data.currentCoins is not None:
+                update_data["currentCoins"] = student_data.currentCoins
+            if student_data.totalCoinsWin is not None:
+                update_data["totalCoinsWin"] = student_data.totalCoinsWin
+            if student_data.lastConnection is not None:
+                update_data["lastConnection"] = student_data.lastConnection
+            if student_data.lstProgress is not None:
+                update_data["lstProgress"] = student_data.lstProgress
+
+            students_collection.document(student_docs[0].id).update(update_data)
+
+            return JSONResponse(content={"message": "Estudiante actualizado exitosamente"}, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Estudiante con ID {student_id} no encontrado"
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al actualizar estudiante: {str(e)}"
+        )
 
 @app.post("/dashboard/students/getProgress")
 async def get_progress_student():
@@ -255,8 +290,30 @@ async def get_progress_student():
 
 
 @app.post("/dashboard/students/delete")
-async def delete_student():
-    pass
+async def delete_student(delete_data: DeleteStudentRequest):
+    try:
+        student_id = delete_data.id
+
+        students_collection = db.collection("tDash_students")
+
+        query = students_collection.where("id", "==", student_id).limit(1)
+        query_result = query.stream()
+
+        student_docs = list(query_result)
+        if student_docs:
+            students_collection.document(student_docs[0].id).delete()
+
+            return JSONResponse(content={"message": "Estudiante eliminado exitosamente"}, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Estudiante con ID {student_id} no encontrado"
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al eliminar estudiante: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
