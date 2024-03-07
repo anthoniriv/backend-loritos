@@ -1,7 +1,8 @@
 import uvicorn
 import pyrebase
+import uuid
 from fastapi import FastAPI
-from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent
+from models import LoginSchema, SingUpSchema, SearchTeacherSchema, GetContent, AddStudentRequest
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -207,8 +208,40 @@ async def get_all_students():
 
 
 @app.post("/dashboard/students/add")
-async def add_new_student():
-    pass
+async def add_new_student(student_data: AddStudentRequest):
+    try:
+        if not student_data.names:
+            raise HTTPException(
+                status_code=400, detail="Se requiere al menos un nombre en los datos del estudiante"
+            )
+
+        for name in student_data.names:
+            # Generar un uuidv4 random para el campo 'id'
+            student_id = str(uuid.uuid4())
+
+            # Obtener la fecha y hora del momento actual para el campo 'lastConnection'
+            current_time = datetime.utcnow()
+
+            # Estructurar los datos del estudiante
+            new_student_data = {
+                "id": student_id,
+                "name": name,
+                "avatarCode": 1,  # Puedes ajustar este valor según tus necesidades
+                "currentCoins": 0,
+                "totalCoinsWin": 0,
+                "lastConnection": current_time,
+                "lstProgress": []  # Puedes ajustar este valor según tus necesidades
+            }
+
+            # Insertar el estudiante en la colección
+            db.collection("tDash_students").add(new_student_data)
+
+        return JSONResponse(content={"message": "Estudiantes agregados exitosamente"}, status_code=201)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al agregar estudiantes: {str(e)}"
+        )
 
 
 @app.post("/dashboard/students/edit")

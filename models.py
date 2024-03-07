@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import List
 
 class SingUpSchema(BaseModel):
     email:str
@@ -30,3 +30,6 @@ class SearchTeacherSchema(BaseModel):
 
 class GetContent(BaseModel):
     contentTypeId: int
+
+class AddStudentRequest(BaseModel):
+    names: List[str]
