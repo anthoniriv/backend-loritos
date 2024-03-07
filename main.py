@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     description="This is a loritos backend", title="LoritosBackend", docs_url="/"
@@ -34,6 +35,13 @@ firebase = pyrebase.initialize_app(firebaseConfig)
 fb_storage = firebase.storage()
 db = firestore.client()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can specify your allowed origins here
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/singup")
 async def create_account(user_data: SingUpSchema):
