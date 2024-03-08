@@ -43,3 +43,8 @@ class DeleteStudentRequest(BaseModel):
 
 class GetStudentDataRequest(BaseModel):
     student_id: str
+
+class ContactMessage(BaseModel):
+    email_content: str
+    name: str
+    last_name: str

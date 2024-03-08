@@ -1,6 +1,9 @@
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import uvicorn
 import pyrebase
 import uuid
+import smtplib
 from fastapi import FastAPI, Depends
 from models import (
     LoginSchema,
@@ -12,6 +15,7 @@ from models import (
     DeleteStudentRequest,
     GetStudentDataRequest,
     ChangePasswordRequest,
+    ContactMessage,
 )
 from datetime import datetime
 from fastapi.responses import JSONResponse
@@ -147,9 +151,7 @@ async def change_teacher_password(
     try:
         # Verificar la contraseña actual del usuario
         email = current_user.get("email")
-        auth.verify_password(
-            email=email, password=password_data.current_password
-        )
+        auth.verify_password(email=email, password=password_data.current_password)
 
         # Cambiar la contraseña del usuario
         auth.update_user(
@@ -207,8 +209,42 @@ async def get_frequently_questions():
 
 
 @app.post("/dashboard/sendMessage")
-async def send_contact_message():
-    pass
+async def send_contact_message(contact_data: ContactMessage):
+    try:
+        # Configura los detalles del servidor de correo
+        smtp_server = "smtp-relay.brevo.com"  # Reemplaza con tu servidor SMTP
+        smtp_port = 587
+        smtp_username = "anthoniriv01@gmail.com"  # Reemplaza con tu correo
+        smtp_password = "9AjfVh2mrnOCZsFw"  # Reemplaza con tu contraseña
+
+        # Configura el contenido del correo
+        subject = "Mensaje desde el dashboard"
+        body = f"Nombre: {contact_data.name}\nApellidos: {contact_data.last_name}\nEnvio: {contact_data.email_content}"
+
+        # Configura el mensaje
+        message = MIMEMultipart()
+        message["From"] = smtp_username
+        message["To"] = "holasoyanthoni@gmail.com"
+        message["Subject"] = subject
+
+        # Agrega el cuerpo del mensaje
+        message.attach(MIMEText(body, "plain"))
+
+        # Conecta y envía el correo
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.sendmail(
+                smtp_username, "holasoyanthoni@gmail.com", message.as_string()
+            )
+
+        return JSONResponse(
+            content={"message": "Correo enviado correctamente"}, status_code=200
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al enviar el correo: {str(e)}"
+        )
 
 
 @app.post("/dashboard/getContent")
