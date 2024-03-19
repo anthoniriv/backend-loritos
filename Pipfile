@@ -10,6 +10,7 @@ firebase-admin = "*"
 pyrebase4 = "*"
 requests = "*"
 typing-extensions = "*"
+stripe = "*"
 
 [dev-packages]
 

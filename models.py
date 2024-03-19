@@ -24,6 +24,7 @@ class GetContent(BaseModel):
 
 class AddStudentRequest(BaseModel):
     names: List[str]
+    teacherId: str
 
 class EditStudentRequest(BaseModel):
     id: str
@@ -46,5 +47,34 @@ class GetStudentDataRequest(BaseModel):
 
 class ContactMessage(BaseModel):
     email_content: str
-    name: str
-    last_name: str
+
+class SessionCheckoutCreate(BaseModel):
+    stripePriceId:str
+
+class SessionStripeCheck(BaseModel):
+    stripe_session_id:str
+    paid_sub: bool
+
+class ClassesAdd(BaseModel):
+    name_class: str
+    type_class: str
+    idTeacher: str
+
+class ClassId(BaseModel):
+    id_class: str
+
+class StudentClassAdd(BaseModel):
+    class_id: str
+    student_ids: List[str]
+
+class StudentClassDel(BaseModel):
+    class_id: str
+    student_id: List[str]
+
+class UnitsClassAdd(BaseModel):
+    class_id: str
+    unit_ids: List[str]
+
+class UnitClassDel(BaseModel):
+    class_id: str
+    unit_id: str
