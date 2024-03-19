@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends
 from models import (
     ClassId,
     ClassesAdd,
+    ForgotPassword,
     LoginSchema,
     SessionCheckoutCreate,
     SessionStripeCheck,
@@ -23,6 +24,7 @@ from models import (
     ContactMessage,
     StudentClassAdd,
     StudentClassDel,
+    StudentProgressRequest,
     UnitClassDel,
     UnitsClassAdd,
 )
@@ -32,6 +34,8 @@ from fastapi.exceptions import HTTPException
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from typing import List, Dict
+from jinja2 import Environment, FileSystemLoader
 
 app = FastAPI(
     description="This is a loritos backend", title="LoritosBackend", docs_url="/"
@@ -99,18 +103,22 @@ def is_email_verified(uid):
         return False
 
 
-def send_email(to_email, body):
+def send_email(to_email, subject, template_name, **kwargs):
     try:
-        subject = "Mensaje desde el dashboard"
-
-        # Configura el mensaje
         message = MIMEMultipart()
         message["From"] = SMTP_USERNAME
         message["To"] = to_email
         message["Subject"] = subject
 
+        # Carga la plantilla HTML
+        env = Environment(loader=FileSystemLoader("templates"))
+        template = env.get_template(template_name)
+
+        # Renderiza la plantilla con los datos proporcionados
+        html_content = template.render(**kwargs)
+
         # Agrega el cuerpo del mensaje
-        message.attach(MIMEText(body, "plain"))
+        message.attach(MIMEText(html_content, "html"))
 
         # Conecta y envía el correo
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
@@ -126,13 +134,17 @@ def send_email(to_email, body):
         return False
 
 
-def send_email_verification(email):
+def send_email_verification(email, userName):
     try:
         # Enviar el correo de verificación
         link = auth.generate_email_verification_link(email, action_code_settings=None)
-        message = link
-        print("MENSAJE", message)
-        sendedEmail = send_email(email, message)
+        sendedEmail = send_email(
+            email,
+            "Verify your email",
+            "emailVerification.html",
+            link=link,
+            user_name=userName,
+        )
         print(sendedEmail)
         return True
 
@@ -147,6 +159,47 @@ def send_email_verification(email):
         return False
 
 
+Plan = Dict[str, str]
+
+
+# Función para obtener los planes de suscripción
+def get_subscription_plans() -> Dict[str, List[Plan]]:
+    # Datos de ejemplo para los planes mensuales y anuales
+    monthly_plans = [
+        {
+            "price_id": "monthly_1",
+            "plan_name": "Monthly Plan 1",
+            "plan_price": "10",
+            "plan_description": "Description for Monthly Plan 1",
+        },
+        {
+            "price_id": "monthly_2",
+            "plan_name": "Monthly Plan 2",
+            "plan_price": "20",
+            "plan_description": "Description for Monthly Plan 2",
+        },
+    ]
+    yearly_plans = [
+        {
+            "price_id": "yearly_1",
+            "plan_name": "Yearly Plan 1",
+            "plan_price": "100",
+            "plan_description": "Description for Yearly Plan 1",
+        },
+        {
+            "price_id": "yearly_2",
+            "plan_name": "Yearly Plan 2",
+            "plan_price": "200",
+            "plan_description": "Description for Yearly Plan 2",
+        },
+    ]
+
+    # Objeto que contiene los planes mensuales y anuales
+    subscription_plans = {"month_plans": monthly_plans, "year_plans": yearly_plans}
+
+    return subscription_plans
+
+
 # APIS
 @app.post("/singup")
 async def create_account(user_data: SingUpSchema):
@@ -158,7 +211,13 @@ async def create_account(user_data: SingUpSchema):
     try:
         # Crear usuario en Firebase Authentication
         user = auth.create_user(email=email, password=password)
-
+        verificacion = is_email_verified(user.uid)
+        if verificacion == True:
+            print("Email verificado")
+        else:
+            print("Se requiere verificacion")
+            send_email_verification(user.email, name)
+            print("Se ha enviado un correo de verificacion")
         # Crear documento en la colección tDash_teacherData
         teacher_data = {
             "id": user.uid,
@@ -213,7 +272,7 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
         # Guardar session_id en la base de datos del usuario
 
         # Retornar la URL de la sesión de checkout
-        return JSONResponse(content={"url": session.url})
+        return JSONResponse(content={"url": session.url, "session_id": session_id})
 
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=500, detail=f"Error de Stripe: {e}")
@@ -222,7 +281,7 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
 
-@app.get("/suscription/check-stripe-session")
+@app.post("/suscription/check-stripe-session")
 async def stripe_session(sessionStripeCheck: SessionStripeCheck):
     try:
         # Simular recuperación del usuario de la base de datos
@@ -237,7 +296,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
 
         # Verificar el estado de la sesión de Stripe
         session = stripe.checkout.Session.retrieve(user["stripe_session_id"])
-
+        print("🔥🔥🔥 SESSION", session)
         # Actualizar el usuario si la sesión está completa
         if session and session.status == "complete":
             # Actualizar el usuario en la base de datos
@@ -289,13 +348,35 @@ async def validate_token(request: Request):
         print("Email verificado")
     else:
         print("Se requiere verificacion")
-        send_email_verification(user["email"])
+        send_email_verification(user["email"], user["name"])
         print("Se ha enviado un correo de verificacion")
 
     return JSONResponse(
         content={"userId": user["user_id"], "email_verified": verificacion},
         status_code=200,
     )
+
+
+@app.post("/lost_password")
+async def lost_password(forgotPass: ForgotPassword):
+    try:
+        # Enviar el correo electrónico de restablecimiento de contraseña
+        link = auth.generate_password_reset_link(forgotPass.email)
+        send_email(
+            forgotPass.email,
+            "Did you forget your password? Get it back here",
+            "lostPassword.html",
+            link=link,
+        )
+        return {
+            "message": "Se ha enviado un correo electrónico de restablecimiento de contraseña"
+        }
+    except auth.UserNotFoundError:
+        return {
+            "error": "No se encontró un usuario con la dirección de correo electrónico proporcionada"
+        }
+    except Exception as e:
+        return {"error": f"Ocurrió un error: {str(e)}"}
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -309,19 +390,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @app.post("/dashboard/teacher/changePassword")
-async def change_teacher_password(
-    password_data: ChangePasswordRequest, current_user: dict = Depends(get_current_user)
-):
+async def change_teacher_password(changePassword: ChangePasswordRequest):
     try:
-        # Verificar la contraseña actual del usuario
-        email = current_user.get("email")
-        auth.verify_password(email=email, password=password_data.current_password)
-
-        # Cambiar la contraseña del usuario
         auth.update_user(
-            uid=current_user.get("user_id"), password=password_data.new_password
+            uid=changePassword.user_id, password=changePassword.new_password
         )
-
+        doc_ref = db.collection("tDash_teacherData").document(changePassword.user_id)
+        doc_ref.update({"password": changePassword.new_password})
         return JSONResponse(
             content={"message": "Contraseña cambiada exitosamente"}, status_code=200
         )
@@ -377,7 +452,12 @@ async def send_contact_message(contact_data: ContactMessage):
     try:
         email = "usuarionumeroseis@gmail.com"
 
-        sendedEmail = send_email(email, contact_data.email_content)
+        sendedEmail = send_email(
+            email,
+            "Solicitud de Contacto",
+            "lostPassword.html",
+            contact_data.email_content,
+        )
         print(sendedEmail)
         return JSONResponse(
             content={"message": "Correo enviado correctamente"}, status_code=200
@@ -718,22 +798,34 @@ async def delete_class(class_delete: ClassId):
 @app.post("/dashboard/classes/addStudents")
 async def add_students(student_add: StudentClassAdd):
     try:
-        # Obtener la referencia al documento de la clase
+        current_time = datetime.now()
+
         class_ref = db.collection("tDash_class").document(student_add.class_id)
 
-        # Verificar si el documento de la clase existe
         if class_ref.get().exists:
-            # Actualizar la lista de estudiantes con los nuevos IDs
             class_ref.update(
                 {"lstStudents": firestore.ArrayUnion(student_add.student_ids)}
             )
+
+            for student_id in student_add.student_ids:
+                student_class_data = {
+                    "idClass": student_add.class_id,
+                    "idStudent": student_id,
+                    "currentUnit": None,
+                    "currentContent": None,
+                    "currentCoins": 0,
+                    "totalCoinsWin": 0,
+                    "lastConnection": current_time,
+                    "lstProgress": None
+                }
+
+                db.collection("tDash_classStudentData").add(student_class_data)
 
             return JSONResponse(
                 content={"message": "Estudiantes añadidos correctamente"},
                 status_code=200,
             )
         else:
-            # Si el documento de la clase no existe, devolver un error
             raise HTTPException(
                 status_code=404,
                 detail=f"No se encontró la clase con ID {student_add.class_id}",
@@ -826,6 +918,43 @@ async def del_student_classes(student_del: StudentClassDel):
             status_code=500,
             detail=f"Error al eliminar los estudiantes de la clase: {str(e)}",
         )
+
+
+@app.post("/dashboard/classes/student/progress")
+async def get_student_progress(studentProgressData: StudentProgressRequest):
+    try:
+        query = (
+            db.collection("tDash_classStudentData")
+            .where("idStudent", "==", studentProgressData.idStudent)
+            .where("idClass", "==", studentProgressData.idClass)
+        )
+        query_result = query.get()
+
+        for doc in query_result:
+            doc_dict = doc.to_dict()
+            doc_dict["lastConnection"] = doc_dict["lastConnection"].strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+            return JSONResponse(content={"data": doc_dict}, status_code=200)
+
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontró ningún documento que coincida con los IDs proporcionados.",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener el progreso del estudiante: {str(e)}",
+        )
+
+
+@app.get("/dashboard/suscription/plans")
+async def get_subscription_plans_route():
+    plans = get_subscription_plans()
+
+    return plans
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

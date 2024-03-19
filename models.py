@@ -13,9 +13,11 @@ class LoginSchema(BaseModel):
     password:str
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
+    user_id: str
     new_password: str
 
+class ForgotPassword(BaseModel):
+    email: str
 class SearchTeacherSchema(BaseModel):
     teacherID: str
 
@@ -78,3 +80,7 @@ class UnitsClassAdd(BaseModel):
 class UnitClassDel(BaseModel):
     class_id: str
     unit_id: str
+
+class StudentProgressRequest(BaseModel):
+    idStudent: str
+    idClass: str

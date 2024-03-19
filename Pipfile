@@ -11,6 +11,7 @@ pyrebase4 = "*"
 requests = "*"
 typing-extensions = "*"
 stripe = "*"
+jinja2 = "*"
 
 [dev-packages]
 
