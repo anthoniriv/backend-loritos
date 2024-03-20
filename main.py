@@ -167,12 +167,14 @@ def get_subscription_plans() -> Dict[str, List[Plan]]:
     # Datos de ejemplo para los planes mensuales y anuales
     monthly_plans = [
         {
-            "price_id": "monthly_1",
-            "plan_name": "Monthly Plan 1",
-            "plan_price": "10",
-            "plan_description": "Description for Monthly Plan 1",
+            "id": "1",
+            "price_id": "price_1OmSy3E2m10pao8WJS59G3Fn",
+            "plan_name": "Loriteach - Pro",
+            "plan_price": "29",
+            "plan_description": "200 Student Capacity Valid for 1 Teacher All 20 Units Content Unlimited Classrooms 1,000+ Interactive activities Hundreds of pages of printable resources",
         },
         {
+            "id": "2",
             "price_id": "monthly_2",
             "plan_name": "Monthly Plan 2",
             "plan_price": "20",
@@ -181,12 +183,14 @@ def get_subscription_plans() -> Dict[str, List[Plan]]:
     ]
     yearly_plans = [
         {
-            "price_id": "yearly_1",
-            "plan_name": "Yearly Plan 1",
-            "plan_price": "100",
-            "plan_description": "Description for Yearly Plan 1",
+            "id": "1",
+            "price_id": "price_1OmSy3E2m10pao8WBQ5xiyhj",
+            "plan_name": "Loriteach - Pro",
+            "plan_price": "199",
+            "plan_description": "200 Student Capacity Valid for 1 Teacher All 20 Units Content Unlimited Classrooms 1,000+ Interactive activities Hundreds of pages of printable resources",
         },
         {
+            "id": "2",
             "price_id": "yearly_2",
             "plan_name": "Yearly Plan 2",
             "plan_price": "200",
@@ -248,8 +252,11 @@ async def create_account(user_data: SingUpSchema):
         )
 
 
-@app.post("/suscription/create-checkout-session")
+@app.post("/subscription/create-checkout-session")
 async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
+
+    print("INICIANDO SERVICO")
+
     CLIENT_URL = "http://localhost:4200/main"
     try:
         # Crear la sesión de checkout en Stripe
@@ -270,6 +277,34 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
         print("session_id:", session_id)
 
         # Guardar session_id en la base de datos del usuario
+
+        # Obtener el ID del maestro
+        teacher_ref = db.collection("tDash_teacherData").document(
+            sessionCheckoutCreate.idTeacher
+        )
+        teacher_data = teacher_ref.get()
+        if not teacher_data.exists:
+            raise HTTPException(status_code=404, detail="ID de maestro no encontrado")
+
+        id_teacher = teacher_data.id
+
+        # Crear un diccionario con los datos de suscripción
+        subscription_data = {
+            "amount_total": sessionCheckoutCreate.amountTotal,
+            "id_plan": sessionCheckoutCreate.idPlan,
+            "paid_sub": sessionCheckoutCreate.paid_sub,
+            "status": sessionCheckoutCreate.status,
+            "stripe_session_id": session_id,
+        }
+
+        # Insertar los datos de suscripción en la subcolección temporal
+        subscription_ref = (
+            db.collection("tDash_teacherData")
+            .document(id_teacher)
+            .collection("tDash_subscriptionData")
+            .document()
+        )
+        subscription_ref.set(subscription_data)
 
         # Retornar la URL de la sesión de checkout
         return JSONResponse(content={"url": session.url, "session_id": session_id})
@@ -758,7 +793,38 @@ async def get_class(class_get: ClassId):
                     "lastModifiedDate"
                 ].strftime("%Y-%m-%d %H:%M:%S")
             class_data["id"] = doc.id
+            print("CLASS_dATA", class_data)
+            # Obtener datos de tDash_content
+            listaUnits = []
+            for unit_id in class_data.get("lstUnits", []):
+                unit_ref = db.collection("tDash_content").document(unit_id)
+                unit_doc = unit_ref.get()
+                if unit_doc.exists:
+                    listaUnits.append(unit_doc.to_dict())
+            print("listaUnits", listaUnits)
+            # Obtener datos de tDash_students
+            listaStudents = []
+            for student_id in class_data.get("lstStudents", []):
+                student_ref = db.collection("tDash_students").document(student_id)
+                student_doc = student_ref.get()
+                if student_doc.exists:
+                    student_data = student_doc.to_dict()
+                    # Convertir objetos datetime a cadenas de texto
+                    if "dateAdded" in student_data:
+                        student_data["dateAdded"] = student_data[
+                            "dateAdded"
+                        ].strftime("%Y-%m-%d %H:%M:%S")
+                    if "lastConnection" in student_data:
+                        student_data["lastConnection"] = student_data[
+                            "lastConnection"
+                        ].strftime("%Y-%m-%d %H:%M:%S")
+                    listaStudents.append(student_data)
+            print("listaStudents", listaStudents)
+            # Agregar listas de unidades y estudiantes a class_data
+            class_data["listaUnits"] = listaUnits
+            class_data["listaStudents"] = listaStudents
 
+            # Convertir a JSON y devolver la respuesta
             return JSONResponse(content={"data": class_data}, status_code=200)
         else:
             # Si el documento no existe, devolver un error

@@ -51,7 +51,12 @@ class ContactMessage(BaseModel):
     email_content: str
 
 class SessionCheckoutCreate(BaseModel):
+    idTeacher: str
     stripePriceId:str
+    amountTotal: int
+    idPlan: str
+    paid_sub: bool
+    status: str
 
 class SessionStripeCheck(BaseModel):
     stripe_session_id:str
