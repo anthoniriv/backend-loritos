@@ -474,27 +474,30 @@ async def get_type_content(contentID: GetContent):
         content_type_id = contentID.contentTypeId
 
         collection_ref = db.collection("tDash_content")
-        docs = collection_ref.where("contentType", "==", content_type_id).stream()
+        docs = collection_ref.where("typeContent", "==", content_type_id).stream()
 
-        content = {
-            "listImages": [],
-            "listPdf": [],
-            "listGames": [],
-            "listVideos": [],
-        }
+        content = []
 
         for doc in docs:
-            content_data = doc.to_dict()
+            doc_data = doc.to_dict()
+            content_item = {
+                "name": doc_data["name"],
+                "description": doc_data["description"],
+                "typeContent": doc_data["typeContent"],
+                "content": {"listDocuments": [], "listContent": []},
+            }
 
-            file_type = content_data.get("fileType")
-            if file_type == 1:
-                content["listImages"].append(content_data)
-            elif file_type == 2:
-                content["listPdf"].append(content_data)
-            elif file_type == 3:
-                content["listGames"].append(content_data)
-            elif file_type == 4:
-                content["listVideos"].append(content_data)
+            content_units_ref = doc.reference.collection("tDash_ContentUnits")
+            content_units_docs = content_units_ref.stream()
+
+            for unit_doc in content_units_docs:
+                unit_doc_data = unit_doc.to_dict()
+                if unit_doc_data.get("fileType") == 2:
+                    content_item["content"]["listDocuments"].append(unit_doc_data)
+                else:
+                    content_item["content"]["listContent"].append(unit_doc_data)
+
+            content.append(content_item)
 
         return JSONResponse(content={"data": content}, status_code=200)
 
@@ -816,7 +819,7 @@ async def add_students(student_add: StudentClassAdd):
                     "currentCoins": 0,
                     "totalCoinsWin": 0,
                     "lastConnection": current_time,
-                    "lstProgress": None
+                    "lstProgress": None,
                 }
 
                 db.collection("tDash_classStudentData").add(student_class_data)
