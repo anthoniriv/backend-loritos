@@ -870,6 +870,10 @@ async def add_students(student_add: StudentClassAdd):
         class_ref = db.collection("tDash_class").document(student_add.class_id)
 
         if class_ref.get().exists:
+            class_ref.update(
+                {"lstStudents": firestore.ArrayUnion(student_add.student_ids)}
+            )
+
             # Obtener el nombre de la clase
             class_data = class_ref.get().to_dict()
             class_name = class_data.get("className")
