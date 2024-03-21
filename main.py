@@ -578,27 +578,22 @@ async def add_new_student(student_data: AddStudentRequest):
             )
 
         for name in student_data.names:
-            # Obtener la fecha y hora del momento actual para el campo 'lastConnection'
             current_time = datetime.utcnow()
 
-            # Estructurar los datos del estudiante
             new_student_data = {
+                "id": "0",
                 "name": name,
-                "avatarCode": 1,  # Puedes ajustar este valor según tus necesidades
-                "currentCoins": 0,
-                "className": "",
-                "totalCoinsWin": 0,
+                "avatarCode": 1,
+                "className": None,
                 "dateAdded": current_time,
                 "lastConnection": current_time,
+                "lastModifiedDate": current_time,
                 "idTeacher": student_data.teacherId,
-                "lstProgress": [],  # Puedes ajustar este valor según tus necesidades
             }
 
-            # Insertar el estudiante en la colección y obtener su ID generado por Firestore
             new_student_ref = db.collection("tDash_students").add(new_student_data)
-            new_student_id = new_student_ref.id
+            new_student_id = new_student_ref[1].id
 
-            # Actualizar el ID del estudiante en sus datos
             new_student_data["id"] = new_student_id
             db.collection("tDash_students").document(new_student_id).set(
                 new_student_data
@@ -875,11 +870,16 @@ async def add_students(student_add: StudentClassAdd):
         class_ref = db.collection("tDash_class").document(student_add.class_id)
 
         if class_ref.get().exists:
-            class_ref.update(
-                {"lstStudents": firestore.ArrayUnion(student_add.student_ids)}
-            )
+            # Obtener el nombre de la clase
+            class_data = class_ref.get().to_dict()
+            class_name = class_data.get("className")
 
+            # Actualizar className para cada estudiante
             for student_id in student_add.student_ids:
+                student_ref = db.collection("tDash_students").document(student_id)
+                student_ref.update({"className": class_name})
+
+                # Crear un documento en tDash_classStudentData
                 student_class_data = {
                     "idClass": student_add.class_id,
                     "idStudent": student_id,
@@ -890,7 +890,6 @@ async def add_students(student_add: StudentClassAdd):
                     "lastConnection": current_time,
                     "lstProgress": None,
                 }
-
                 db.collection("tDash_classStudentData").add(student_class_data)
 
             return JSONResponse(
