@@ -255,14 +255,11 @@ async def create_account(user_data: SingUpSchema):
 @app.post("/subscription/create-checkout-session")
 async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
 
-    print("INICIANDO SERVICO")
-
-    CLIENT_URL = "http://localhost:4200/main"
     try:
         # Crear la sesión de checkout en Stripe
         session = stripe.checkout.Session.create(
-            success_url=CLIENT_URL,
-            cancel_url=CLIENT_URL,
+            success_url="http://localhost:4200/main/subscription/success?id_plan=" + sessionCheckoutCreate.idPlan,
+            cancel_url="http://localhost:4200/main/subscription/canceled",
             line_items=[
                 {
                     "price": sessionCheckoutCreate.stripePriceId,
@@ -813,9 +810,9 @@ async def get_class(class_get: ClassId):
                             "%Y-%m-%d %H:%M:%S"
                         )
                     if "lastModifiedDate" in student_data:
-                        student_data["lastModifiedDate"] = student_data["lastModifiedDate"].strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
+                        student_data["lastModifiedDate"] = student_data[
+                            "lastModifiedDate"
+                        ].strftime("%Y-%m-%d %H:%M:%S")
                     if "lastConnection" in student_data:
                         student_data["lastConnection"] = student_data[
                             "lastConnection"
@@ -1029,10 +1026,55 @@ async def get_student_progress(studentProgressData: StudentProgressRequest):
 
 
 @app.get("/dashboard/suscription/plans")
-async def get_subscription_plans_route():
-    plans = get_subscription_plans()
+async def get_subscription_plans_route(plan_id: str = None):
+    try:
+        # Consultar la colección de planes
+        plans_ref = db.collection("tDash_plans")
 
-    return plans
+        if plan_id:
+            # Obtener el documento del plan con el ID especificado
+            plan_doc = plans_ref.document(plan_id).get()
+            if plan_doc.exists:
+                # Devolver el plan con el ID especificado
+                return JSONResponse(
+                    content={"plan": plan_doc.to_dict()}, status_code=200
+                )
+            else:
+                # Si no se encuentra el plan con el ID especificado, devolver un error
+                raise HTTPException(
+                    status_code=404, detail=f"No se encontró el plan con ID {plan_id}"
+                )
+        else:
+            # Inicializar diccionarios para planes mensuales y anuales
+            plans_mensuales = {}
+            plans_anuales = {}
+
+            # Iterar sobre los documentos de la colección
+            for doc in plans_ref.stream():
+                plan_data = doc.to_dict()
+                plan_id = doc.id
+                type_plan = plan_data.get("type_plan")
+
+                # Agregar el plan al diccionario correspondiente según su tipo
+                if type_plan == 1:
+                    plans_mensuales[plan_id] = plan_data
+                else:
+                    plans_anuales[plan_id] = plan_data
+
+            # Devolver los planes organizados
+            return JSONResponse(
+                content={
+                    "plans_mensuales": plans_mensuales,
+                    "plans_anuales": plans_anuales,
+                },
+                status_code=200,
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener los planes de suscripción: {str(e)}",
+        )
 
 
 if __name__ == "__main__":
