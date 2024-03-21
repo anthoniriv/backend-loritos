@@ -578,15 +578,11 @@ async def add_new_student(student_data: AddStudentRequest):
             )
 
         for name in student_data.names:
-            # Generar un uuidv4 random para el campo 'id'
-            student_id = str(uuid.uuid4())
-
             # Obtener la fecha y hora del momento actual para el campo 'lastConnection'
             current_time = datetime.utcnow()
 
             # Estructurar los datos del estudiante
             new_student_data = {
-                "id": student_id,
                 "name": name,
                 "avatarCode": 1,  # Puedes ajustar este valor según tus necesidades
                 "currentCoins": 0,
@@ -598,8 +594,15 @@ async def add_new_student(student_data: AddStudentRequest):
                 "lstProgress": [],  # Puedes ajustar este valor según tus necesidades
             }
 
-            # Insertar el estudiante en la colección
-            db.collection("tDash_students").add(new_student_data)
+            # Insertar el estudiante en la colección y obtener su ID generado por Firestore
+            new_student_ref = db.collection("tDash_students").add(new_student_data)
+            new_student_id = new_student_ref.id
+
+            # Actualizar el ID del estudiante en sus datos
+            new_student_data["id"] = new_student_id
+            db.collection("tDash_students").document(new_student_id).set(
+                new_student_data
+            )
 
         return JSONResponse(
             content={"message": "Estudiantes agregados exitosamente"}, status_code=201
@@ -811,9 +814,9 @@ async def get_class(class_get: ClassId):
                     student_data = student_doc.to_dict()
                     # Convertir objetos datetime a cadenas de texto
                     if "dateAdded" in student_data:
-                        student_data["dateAdded"] = student_data[
-                            "dateAdded"
-                        ].strftime("%Y-%m-%d %H:%M:%S")
+                        student_data["dateAdded"] = student_data["dateAdded"].strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     if "lastConnection" in student_data:
                         student_data["lastConnection"] = student_data[
                             "lastConnection"
