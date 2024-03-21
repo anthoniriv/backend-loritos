@@ -812,6 +812,10 @@ async def get_class(class_get: ClassId):
                         student_data["dateAdded"] = student_data["dateAdded"].strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
+                    if "lastModifiedDate" in student_data:
+                        student_data["lastModifiedDate"] = student_data["lastModifiedDate"].strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     if "lastConnection" in student_data:
                         student_data["lastConnection"] = student_data[
                             "lastConnection"
