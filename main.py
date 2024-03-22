@@ -597,7 +597,6 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
         )
 
 
-
 @app.get("/dashboard/getFrequentlyQuestions")
 async def get_frequently_questions():
     try:
@@ -680,6 +679,7 @@ async def get_type_content(contentID: GetContent):
             status_code=500, detail=f"Error al obtener el contenido: {str(e)}"
         )
 
+
 @app.get("/dashboard/students")
 async def get_all_students():
     try:
@@ -735,6 +735,14 @@ async def add_new_student(student_data: AddStudentRequest):
             new_student_data["id"] = new_student_id
             db.collection("tDash_students").document(new_student_id).set(
                 new_student_data
+            )
+
+            # Actualizar lstStudents en el documento tDash_teacherData
+            teacher_data_ref = db.collection("tDash_teacherData").document(
+                student_data.teacherId
+            )
+            teacher_data_ref.update(
+                {"lstStudents": firestore.ArrayUnion([new_student_id])}
             )
 
         return JSONResponse(
@@ -871,10 +879,19 @@ async def create_classes(classes_add: ClassesAdd):
             "lastModifiedDate": current_time,
         }
 
-        # Agregar un nuevo documento a la colección tDash_Classes
         new_class_ref = db.collection("tDash_class").add(class_data)
 
-        print(new_class_ref)
+        teacher_data_ref = db.collection("tDash_teacherData").document(
+            classes_add.idTeacher
+        )
+        teacher_doc = teacher_data_ref.get()
+
+        if teacher_doc.exists:
+            lst_classes = teacher_doc.to_dict().get("lstClasses", [])
+
+            lst_classes.append(new_class_ref[1].id)
+
+            teacher_data_ref.update({"lstClasses": lst_classes})
 
         return JSONResponse(
             content={"message": "Clase creada correctamente"}, status_code=201
@@ -1136,6 +1153,7 @@ async def del_student_classes(student_del: StudentClassDel):
             detail=f"Error al eliminar los estudiantes de la clase: {str(e)}",
         )
 
+
 @app.post("/dashboard/classes/getLstStudents")
 async def get_lst_student_classes(idClass: IdClass):
     try:
@@ -1153,21 +1171,60 @@ async def get_lst_student_classes(idClass: IdClass):
             for student_id in lst_students:
                 student_doc = db.collection("tDash_students").document(student_id).get()
                 if student_doc.exists:
-                    students_data.append(student_doc.to_dict())
+                    student_data = student_doc.to_dict()
+
+                    # Convertir las fechas a cadenas de texto en un formato deseado
+                    for key, value in student_data.items():
+                        if isinstance(value, datetime):
+                            student_data[key] = value.strftime("%Y-%m-%d %H:%M:%S")
+
+                    students_data.append(student_data)
 
             return JSONResponse(content={"students": students_data}, status_code=200)
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"No se encontró la clase con ID {idClass.idClass}"
+                detail=f"No se encontró la clase con ID {idClass.idClass}",
             )
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error al obtener los datos de los estudiantes: {str(e)}"
+            detail=f"Error al obtener los datos de los estudiantes: {str(e)}",
         )
 
+
+@app.post("/dashboard/classes/getLstUnits")
+async def get_lst_unit_classes(idClass: IdClass):
+    try:
+        # Buscar el documento de la clase en la colección tDash_class
+        class_doc = db.collection("tDash_class").document(idClass.idClass).get()
+
+        if class_doc.exists:
+            # Obtener la lista de unidades de la clase
+            lst_units = class_doc.to_dict().get("lstUnits", [])
+
+            # Crear una lista para almacenar los datos de las unidades
+            units_data = []
+
+            # Recorrer la lista de unidades y obtener sus datos
+            for unit_id in lst_units:
+                unit_doc = db.collection("tDash_content").document(unit_id).get()
+                if unit_doc.exists:
+                    units_data.append(unit_doc.to_dict())
+
+            return JSONResponse(content={"units": units_data}, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró la clase con ID {idClass.idClass}",
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener los datos de las unidades: {str(e)}",
+        )
 
 
 @app.post("/dashboard/classes/student/progress")
