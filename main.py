@@ -681,10 +681,14 @@ async def get_type_content(contentID: GetContent):
 
 
 @app.get("/dashboard/students")
-async def get_all_students():
+async def get_all_students(teacherID: str):
     try:
+        # Obtener una referencia a la colección tDash_students
         collection_ref = db.collection("tDash_students")
-        docs = collection_ref.stream()
+
+        # Realizar la consulta filtrando por el campo idTeacher
+        query = collection_ref.where("idTeacher", "==", teacherID)
+        docs = query.stream()
 
         list_students = []
 
