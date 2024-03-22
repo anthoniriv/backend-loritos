@@ -258,7 +258,8 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
     try:
         # Crear la sesión de checkout en Stripe
         session = stripe.checkout.Session.create(
-            success_url="http://localhost:4200/main/subscription/success?id_plan=" + sessionCheckoutCreate.idPlan,
+            success_url="http://localhost:4200/main/subscription/success?id_plan="
+            + sessionCheckoutCreate.idPlan,
             cancel_url="http://localhost:4200/main/subscription/canceled",
             line_items=[
                 {
@@ -1035,7 +1036,7 @@ async def get_subscription_plans_route(plan_id: str = None):
             # Obtener el documento del plan con el ID especificado
             plan_doc = plans_ref.document(plan_id).get()
             if plan_doc.exists:
-                # Devolver el plan con el ID especificado
+                # Devolver el plan con el ID especificado como un objeto
                 return JSONResponse(
                     content={"plan": plan_doc.to_dict()}, status_code=200
                 )
@@ -1045,23 +1046,22 @@ async def get_subscription_plans_route(plan_id: str = None):
                     status_code=404, detail=f"No se encontró el plan con ID {plan_id}"
                 )
         else:
-            # Inicializar diccionarios para planes mensuales y anuales
-            plans_mensuales = {}
-            plans_anuales = {}
+            # Inicializar listas para planes mensuales y anuales
+            plans_mensuales = []
+            plans_anuales = []
 
             # Iterar sobre los documentos de la colección
             for doc in plans_ref.stream():
                 plan_data = doc.to_dict()
-                plan_id = doc.id
                 type_plan = plan_data.get("type_plan")
 
-                # Agregar el plan al diccionario correspondiente según su tipo
+                # Agregar el plan a la lista correspondiente según su tipo
                 if type_plan == 1:
-                    plans_mensuales[plan_id] = plan_data
+                    plans_mensuales.append(plan_data)
                 else:
-                    plans_anuales[plan_id] = plan_data
+                    plans_anuales.append(plan_data)
 
-            # Devolver los planes organizados
+            # Devolver los planes organizados como listas
             return JSONResponse(
                 content={
                     "plans_mensuales": plans_mensuales,
