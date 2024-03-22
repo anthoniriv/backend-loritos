@@ -11,6 +11,7 @@ from models import (
     ClassId,
     ClassesAdd,
     ForgotPassword,
+    IdClass,
     LoginSchema,
     SessionCheckoutCreate,
     SessionStripeCheck,
@@ -653,6 +654,7 @@ async def get_type_content(contentID: GetContent):
         for doc in docs:
             doc_data = doc.to_dict()
             content_item = {
+                "id": doc.id,
                 "name": doc_data["name"],
                 "description": doc_data["description"],
                 "typeContent": doc_data["typeContent"],
@@ -677,7 +679,6 @@ async def get_type_content(contentID: GetContent):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener el contenido: {str(e)}"
         )
-
 
 @app.get("/dashboard/students")
 async def get_all_students():
@@ -1134,6 +1135,39 @@ async def del_student_classes(student_del: StudentClassDel):
             status_code=500,
             detail=f"Error al eliminar los estudiantes de la clase: {str(e)}",
         )
+
+@app.post("/dashboard/classes/getLstStudents")
+async def get_lst_student_classes(idClass: IdClass):
+    try:
+        # Buscar el documento de la clase en la colección tDash_class
+        class_doc = db.collection("tDash_class").document(idClass.idClass).get()
+
+        if class_doc.exists:
+            # Obtener la lista de estudiantes de la clase
+            lst_students = class_doc.to_dict().get("lstStudents", [])
+
+            # Crear una lista para almacenar los datos de los estudiantes
+            students_data = []
+
+            # Recorrer la lista de estudiantes y obtener sus datos
+            for student_id in lst_students:
+                student_doc = db.collection("tDash_students").document(student_id).get()
+                if student_doc.exists:
+                    students_data.append(student_doc.to_dict())
+
+            return JSONResponse(content={"students": students_data}, status_code=200)
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró la clase con ID {idClass.idClass}"
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener los datos de los estudiantes: {str(e)}"
+        )
+
 
 
 @app.post("/dashboard/classes/student/progress")

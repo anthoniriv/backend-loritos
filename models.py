@@ -93,3 +93,6 @@ class UnitClassDel(BaseModel):
 class StudentProgressRequest(BaseModel):
     idStudent: str
     idClass: str
+
+class IdClass(BaseModel):
+    idClass: str
