@@ -59,8 +59,12 @@ class SessionCheckoutCreate(BaseModel):
     status: str
 
 class SessionStripeCheck(BaseModel):
+    userId: str
     stripe_session_id:str
     paid_sub: bool
+
+class CancelSuscription(BaseModel):
+    userId: str
 
 class ClassesAdd(BaseModel):
     name_class: str
