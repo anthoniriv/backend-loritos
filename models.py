@@ -22,7 +22,7 @@ class SearchTeacherSchema(BaseModel):
     teacherID: str
 
 class GetContent(BaseModel):
-    contentTypeId: int
+    contentTypeId: str
 
 class AddStudentRequest(BaseModel):
     names: List[str]
