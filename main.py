@@ -543,6 +543,11 @@ async def change_teacher_password(changePassword: ChangePasswordRequest):
         )
 
 
+from datetime import datetime
+
+
+from datetime import datetime
+
 @app.post("/dashboard/teacher/getData")
 async def get_teacher_data(teacherData: SearchTeacherSchema):
     teacherID = teacherData.teacherID
@@ -555,6 +560,11 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
             # Obtener los datos del profesor
             teacher_data = teacher_doc.to_dict()
 
+            # Convertir campos de fecha y hora a cadenas de texto
+            for key, value in teacher_data.items():
+                if isinstance(value, datetime):
+                    teacher_data[key] = value.strftime("%Y-%m-%d %H:%M:%S")
+
             # Obtener el documento de la subcolección tDash_subscriptionData si existe
             subscription_data_query = teacher_ref.collection(
                 "tDash_subscriptionData"
@@ -564,6 +574,11 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
             subscription_data = None
             if subscription_data_docs:
                 subscription_data = subscription_data_docs[0].to_dict()
+
+                # Convertir el campo "renewDate" a cadena de texto si es un objeto datetime
+                renew_date = subscription_data.get("renewDate")
+                if isinstance(renew_date, datetime):
+                    subscription_data["renewDate"] = renew_date.strftime("%Y-%m-%d %H:%M:%S")
 
                 # Verificar el plan en la colección tDash_plans
                 plan_id = subscription_data.get("id_plan")
@@ -595,6 +610,7 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener datos del profesor: {str(e)}"
         )
+
 
 
 @app.get("/dashboard/getFrequentlyQuestions")
