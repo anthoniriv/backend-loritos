@@ -784,16 +784,16 @@ async def get_student_data(request_data: GetStudentDataRequest):
 
         students_collection = db.collection("tDash_students")
 
-        query = students_collection.where("id", "==", student_id).limit(1)
-        query_result = query.stream()
+        student_doc_ref = students_collection.document(student_id)
+        student_doc = student_doc_ref.get()
 
-        student_docs = list(query_result)
-        if student_docs:
-            student_data = student_docs[0].to_dict()
+        if student_doc.exists:
+            student_data = student_doc.to_dict()
 
-            for field in ["lastConnection", "dateAdded"]:
-                if field in student_data:
-                    student_data[field] = student_data[field].isoformat()
+            # Convertir campos de fecha y hora a cadenas ISO
+            for key, value in student_data.items():
+                if isinstance(value, datetime):
+                    student_data[key] = value.isoformat()
 
             return JSONResponse(content={"data": student_data}, status_code=200)
         else:
