@@ -548,6 +548,7 @@ from datetime import datetime
 
 from datetime import datetime
 
+
 @app.post("/dashboard/teacher/getData")
 async def get_teacher_data(teacherData: SearchTeacherSchema):
     teacherID = teacherData.teacherID
@@ -578,7 +579,9 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
                 # Convertir el campo "renewDate" a cadena de texto si es un objeto datetime
                 renew_date = subscription_data.get("renewDate")
                 if isinstance(renew_date, datetime):
-                    subscription_data["renewDate"] = renew_date.strftime("%Y-%m-%d %H:%M:%S")
+                    subscription_data["renewDate"] = renew_date.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
 
                 # Verificar el plan en la colección tDash_plans
                 plan_id = subscription_data.get("id_plan")
@@ -610,7 +613,6 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener datos del profesor: {str(e)}"
         )
-
 
 
 @app.get("/dashboard/getFrequentlyQuestions")
@@ -1221,6 +1223,9 @@ async def get_lst_unit_classes(idClass: IdClass):
         class_doc = db.collection("tDash_class").document(idClass.idClass).get()
 
         if class_doc.exists:
+            # Obtener el ID del documento de la clase
+            class_id = class_doc.id
+
             # Obtener la lista de unidades de la clase
             lst_units = class_doc.to_dict().get("lstUnits", [])
 
@@ -1231,7 +1236,14 @@ async def get_lst_unit_classes(idClass: IdClass):
             for unit_id in lst_units:
                 unit_doc = db.collection("tDash_content").document(unit_id).get()
                 if unit_doc.exists:
-                    units_data.append(unit_doc.to_dict())
+                    # Obtener el ID del documento de la unidad
+                    unit_id = unit_doc.id
+
+                    # Agregar el ID del documento a los datos de la unidad
+                    unit_data = unit_doc.to_dict()
+                    unit_data["id"] = unit_id
+
+                    units_data.append(unit_data)
 
             return JSONResponse(content={"units": units_data}, status_code=200)
         else:
