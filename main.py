@@ -328,13 +328,15 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             return PlainTextResponse(content="fail")
 
         session = stripe.checkout.Session.retrieve(user["stripe_session_id"])
-        suscription = stripe.Subscription.retrieve(session["subscription"])
-        invoice = stripe.Invoice.retrieve(session["invoice"])
-        activeSus = suscription["plan"]["active"]
-        urlInvoice = invoice["invoice_pdf"]
-        renewDate = invoice["lines"]["data"][0]["period"]["end"]
 
         if session and session.status == "complete":
+
+            suscription = stripe.Subscription.retrieve(session["subscription"])
+            invoice = stripe.Invoice.retrieve(session["invoice"])
+            activeSus = suscription["plan"]["active"]
+            urlInvoice = invoice["invoice_pdf"]
+            renewDate = invoice["lines"]["data"][0]["period"]["end"]
+
             teacher_data_ref = db.collection("tDash_teacherData").document(
                 sessionStripeCheck.userId
             )
