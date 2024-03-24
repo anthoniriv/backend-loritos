@@ -328,15 +328,13 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             return PlainTextResponse(content="fail")
 
         session = stripe.checkout.Session.retrieve(user["stripe_session_id"])
+        suscription = stripe.Subscription.retrieve(session["subscription"])
+        invoice = stripe.Invoice.retrieve(session["invoice"])
+        activeSus = suscription["plan"]["active"]
+        urlInvoice = invoice["invoice_pdf"]
+        renewDate = invoice["lines"]["data"][0]["period"]["end"]
 
         if session and session.status == "complete":
-
-            suscription = stripe.Subscription.retrieve(session["subscription"])
-            invoice = stripe.Invoice.retrieve(session["invoice"])
-            activeSus = suscription["plan"]["active"]
-            urlInvoice = invoice["invoice_pdf"]
-            renewDate = invoice["lines"]["data"][0]["period"]["end"]
-
             teacher_data_ref = db.collection("tDash_teacherData").document(
                 sessionStripeCheck.userId
             )
@@ -401,14 +399,17 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             for doc in subscription_data_docs:
                 doc.reference.delete()
 
-            # Retornar "fail" si la sesión no está completa
-            return PlainTextResponse(content="fail")
+            # Retornar un JSON con el mensaje de cancelación exitoso
+            return JSONResponse(
+                content={"message": "Cancelación exitosa"}, status_code=200
+            )
 
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=500, detail=f"Error de Stripe: {e}")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
 
 
 @app.post("/suscription/cancel-stripe-suscription")
