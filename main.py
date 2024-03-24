@@ -387,6 +387,18 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
 
             return JSONResponse(content=response_data, status_code=200)
         else:
+            # Eliminar la subcolección tDash_subscriptionData si la sesión no está completa
+            teacher_data_ref = db.collection("tDash_teacherData").document(
+                sessionStripeCheck.userId
+            )
+            subscription_data_ref = teacher_data_ref.collection(
+                "tDash_subscriptionData"
+            )
+            subscription_data_docs = subscription_data_ref.stream()
+
+            for doc in subscription_data_docs:
+                doc.reference.delete()
+
             # Retornar "fail" si la sesión no está completa
             return PlainTextResponse(content="fail")
 
