@@ -1,8 +1,5 @@
 import uvicorn
-import pyrebase
-import stripe
-import firebase_admin
-from firebase_admin import credentials, auth, firestore
+from firebase_admin import auth
 from fastapi import FastAPI, Depends
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware

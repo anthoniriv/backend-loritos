@@ -16,7 +16,7 @@ from models import (
 
 router = APIRouter()
 
-@router.get("/dashboard/students")
+@router.get("/")
 async def get_all_students(teacherID: str):
     try:
         collection_ref = db.collection("tDash_students")
@@ -43,7 +43,7 @@ async def get_all_students(teacherID: str):
         )
 
 
-@router.post("/dashboard/students/add")
+@router.post("/add")
 async def add_new_student(student_data: AddStudentRequest):
     try:
         if not student_data.names:
@@ -91,7 +91,7 @@ async def add_new_student(student_data: AddStudentRequest):
         )
 
 
-@router.post("/dashboard/students/getStudentData")
+@router.post("/getStudentData")
 async def get_student_data(request_data: GetStudentDataRequest):
     try:
         student_id = request_data.student_id
@@ -120,7 +120,7 @@ async def get_student_data(request_data: GetStudentDataRequest):
         )
 
 
-@router.post("/dashboard/students/edit")
+@router.post("/edit")
 async def edit_student(student_data: EditStudentRequest):
     try:
         student_id = student_data.id
@@ -163,11 +163,11 @@ async def edit_student(student_data: EditStudentRequest):
         )
 
 
-@router.post("/dashboard/students/getProgress")
+@router.post("/getProgress")
 async def get_progress_student():
     pass
 
-@router.post("/dashboard/students/delete")
+@router.post("/delete")
 async def delete_student(delete_data: DeleteStudentRequest):
     try:
         student_id = delete_data.id
