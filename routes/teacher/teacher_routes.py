@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from config import db, auth
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
