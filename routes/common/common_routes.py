@@ -5,7 +5,7 @@ from fastapi.exceptions import HTTPException
 
 router = APIRouter()
 
-@app.get("/getFrequentlyQuestions")
+@router.get("/getFrequentlyQuestions")
 async def get_frequently_questions():
     try:
         collection_ref = db.collection("tDash_frequentQuestions")
