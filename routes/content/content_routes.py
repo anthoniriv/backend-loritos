@@ -6,7 +6,7 @@ from models import GetContent
 
 router = APIRouter()
 
-@app.post("/listContent")
+@router.post("/listContent")
 async def get_type_content(contentID: GetContent):
     try:
         if contentID.contentTypeId == "UM":
