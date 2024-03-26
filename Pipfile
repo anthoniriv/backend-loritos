@@ -12,6 +12,7 @@ requests = "*"
 typing-extensions = "*"
 stripe = "*"
 jinja2 = "*"
+pdfkit = "*"
 
 [dev-packages]
 
