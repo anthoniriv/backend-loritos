@@ -1,10 +1,10 @@
 import base64
 from datetime import datetime
-
+import pdfkit
 from jinja2 import Template
 from config import db, firestore
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.exceptions import HTTPException
 
 from models import (
@@ -383,22 +383,33 @@ async def add_unitsClasses(idClass: IdClass):
             class_data = class_doc.to_dict()
 
             # Renderizar la plantilla HTML con los datos de la clase
-            html_content = render_html_template(
-                "classCredentialsTemplate.html",
-                {
-                    "class_name": class_data["className"],
-                    "user": class_data["user"],
-                    "password": class_data["password"],
-                },
+            template_str = """
+            <html>
+            <head><title>Credentials</title></head>
+            <body>
+            <h1>Credentials for Class {{ class_name }}</h1>
+            <p>User: {{ user }}</p>
+            <p>Password: {{ password }}</p>
+            </body>
+            </html>
+            """
+            template = Template(template_str)
+            html_content = template.render(
+                class_name=class_data["className"],
+                user=class_data["user"],
+                password=class_data["password"],
             )
 
-            # Codificar el contenido HTML en base64
-            encoded_content = base64.b64encode(html_content.encode()).decode()
+            # Generar el PDF
+            pdf = pdfkit.from_string(html_content, False)
 
-            # Devolver el contenido base64 como respuesta JSON
-            return JSONResponse(
-                content={"base64_html": encoded_content}, status_code=200
-            )
+            # Guardar el PDF temporalmente
+            pdf_file = "/tmp/class_credentials.pdf"
+            with open(pdf_file, "wb") as f:
+                f.write(pdf)
+
+            # Retornar el PDF como descarga
+            return FileResponse(pdf_file, filename="class_credentials.pdf")
 
         else:
             raise HTTPException(
