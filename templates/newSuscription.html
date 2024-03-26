@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Suscripción exitosa</title>
+  </head>
+  <body>
+    <h1>Suscripción exitosa</h1>
+    <p>Estimado usuario,</p>
+    <p>Le informamos que su suscripción ha sido procesada con éxito.</p>
+    <p>A continuación, encontrará algunos detalles sobre su suscripción:</p>
+    <ul>
+      <li><strong>ID de suscripción:</strong> {{ subscriptionId }}</li>
+      <li><strong>Fecha de renovación:</strong> {{ renewDate }}</li>
+      <li><strong>Estado de la suscripción:</strong> {{ activeSus }}</li>
+    </ul>
+    <p>
+      Puede acceder a su factura a través del siguiente enlace:
+      <a href="{{ urlInvoice }}">Descargar factura</a>
+    </p>
+    <p>Gracias por su suscripción.</p>
+    <p>Saludos,</p>
+    <p>El equipo de Loritos</p>
+  </body>
+</html>

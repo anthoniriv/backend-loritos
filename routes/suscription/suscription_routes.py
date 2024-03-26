@@ -11,7 +11,10 @@ from models import (
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.exceptions import HTTPException
 
+from utils import send_email
+
 router = APIRouter()
+
 
 @router.post("/create-checkout-session")
 async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
@@ -66,6 +69,7 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
+
 @router.post("/check-stripe-session")
 async def stripe_session(sessionStripeCheck: SessionStripeCheck):
     try:
@@ -88,6 +92,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             teacher_data_ref = db.collection("tDash_teacherData").document(
                 sessionStripeCheck.userId
             )
+            teacher_data = teacher_data_ref.get().to_dict()
 
             subscription_data_query = (
                 teacher_data_ref.collection("tDash_subscriptionData")
@@ -134,6 +139,27 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 merge=True,
             )
 
+            dataForEmail = {
+                "subscriptionData": {
+                    "subscriptionId": session["subscription"],
+                    "renewDate": renewDate,
+                    "activeSus": activeSus,
+                },
+                "urlInvoice": urlInvoice,
+            }
+
+            sendedEmail = send_email(
+                teacher_data["email"],
+                "Suscription Owned",
+                "newSuscription.html",
+                subscriptionId = session["subscription"],
+                renewDate = renewDate,
+                activeSus = activeSus,
+                urlInvoice = urlInvoice
+            )
+
+            print(sendedEmail)
+
             return JSONResponse(content=response_data, status_code=200)
         else:
             teacher_data_ref = db.collection("tDash_teacherData").document(
@@ -156,6 +182,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
 
 @router.post("/cancel-stripe-suscription")
 async def cancel_suscription(cancelSuscription: CancelSuscription):
@@ -192,12 +219,18 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
 
         print("asdasdas", subscription_data)
 
-        if "subscriptionId" in subscription_data:  # Verifica si hay datos en subscription_data
+        if (
+            "subscriptionId" in subscription_data
+        ):  # Verifica si hay datos en subscription_data
             print("asdasdas", subscription_data["subscriptionId"])
             stripe.Subscription.cancel(subscription_data["subscriptionId"])
-            teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
+            teacher_data_ref.collection("tDash_subscriptionData").document(
+                idDoc
+            ).delete()
         else:
-            teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
+            teacher_data_ref.collection("tDash_subscriptionData").document(
+                idDoc
+            ).delete()
 
         return JSONResponse(
             content={"message": "Suscripción cancelada correctamente"}, status_code=200
