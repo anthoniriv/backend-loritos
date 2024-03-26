@@ -1,7 +1,10 @@
+import base64
 from datetime import datetime
+
+from jinja2 import Template
 from config import db, firestore
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.exceptions import HTTPException
 
 from models import (
@@ -365,6 +368,43 @@ async def get_lst_unit_classes(idClass: IdClass):
         raise HTTPException(
             status_code=500,
             detail=f"Error al obtener los datos de las unidades: {str(e)}",
+        )
+
+
+from utils import render_html_template
+
+
+@router.post("/getCredentials")
+async def add_unitsClasses(idClass: IdClass):
+    try:
+        # Obtener los datos de la clase
+        class_doc = db.collection("tDash_class").document(idClass.idClass).get()
+        if class_doc.exists:
+            class_data = class_doc.to_dict()
+
+            # Renderizar la plantilla HTML con los datos de la clase
+            html_content = render_html_template(
+                "classCredentialsTemplate.html",
+                {
+                    "class_name": class_data["className"],
+                    "user": class_data["user"],
+                    "password": class_data["password"],
+                },
+            )
+
+            # Devolver el contenido HTML con el tipo de contenido MIME adecuado
+            return HTMLResponse(content=html_content, status_code=200)
+
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró la clase con ID {idClass.idClass}",
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener las credenciales de la clase: {str(e)}",
         )
 
 

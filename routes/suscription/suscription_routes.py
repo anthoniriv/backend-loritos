@@ -190,9 +190,14 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
         else:
             subscription_data = {}
 
-        print("asdasdas", subscription_data["subscriptionId"])
-        stripe.Subscription.cancel(subscription_data["subscriptionId"])
-        teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
+        print("asdasdas", subscription_data)
+
+        if "subscriptionId" in subscription_data:  # Verifica si hay datos en subscription_data
+            print("asdasdas", subscription_data["subscriptionId"])
+            stripe.Subscription.cancel(subscription_data["subscriptionId"])
+            teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
+        else:
+            teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
 
         return JSONResponse(
             content={"message": "Suscripción cancelada correctamente"}, status_code=200
@@ -203,6 +208,7 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
 
 @router.get("/plans")
 async def get_subscription_plans_route(plan_id: str = None):

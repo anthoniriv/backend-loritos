@@ -1,4 +1,5 @@
 # pylint: disable=import-error
+import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -68,3 +69,22 @@ def send_email_verification(email, userName):
     except Exception as e:
         print("Error:", e)
         return False
+
+def render_html_template(template_name, data):
+    try:
+        # Obtener la ruta al directorio de las plantillas
+        templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+
+        # Crear el entorno de Jinja2
+        env = Environment(loader=FileSystemLoader(templates_dir))
+
+        # Obtener la plantilla
+        template = env.get_template(template_name)
+
+        # Renderizar la plantilla con los datos proporcionados
+        html_content = template.render(**data)
+
+        return html_content
+
+    except Exception as e:
+        raise RuntimeError(f"Error al renderizar la plantilla HTML: {str(e)}")
