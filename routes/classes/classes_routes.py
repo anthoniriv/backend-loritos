@@ -392,13 +392,8 @@ async def add_unitsClasses(idClass: IdClass):
                 },
             )
 
-            # Codificar el contenido HTML en base64
-            encoded_content = base64.b64encode(html_content.encode()).decode()
-
-            # Devolver el contenido base64 como respuesta JSON
-            return JSONResponse(
-                content={"base64_html": encoded_content}, status_code=200
-            )
+            # Devolver el contenido HTML con el tipo de contenido MIME adecuado
+            return HTMLResponse(content=html_content, status_code=200)
 
         else:
             raise HTTPException(
