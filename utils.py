@@ -49,7 +49,7 @@ def send_email(to_email, subject, template_name, **kwargs):
         return False
 
 
-def send_email_verification(email, userName):
+def send_email_verification(email):
     try:
         link = auth.generate_email_verification_link(email, action_code_settings=None)
         sendedEmail = send_email(
@@ -57,7 +57,6 @@ def send_email_verification(email, userName):
             "Verify your email",
             "emailVerification.html",
             link=link,
-            user_name=userName,
         )
         print(sendedEmail)
         return True

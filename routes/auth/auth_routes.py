@@ -31,7 +31,7 @@ async def create_account(user_data: SingUpSchema):
             print("Email verificado")
         else:
             print("Se requiere verificacion")
-            send_email_verification(user.email, name)
+            send_email_verification(user.email)
             print("Se ha enviado un correo de verificacion")
         # Crear documento en la colección tDash_teacherData
         teacher_data = {
@@ -43,6 +43,14 @@ async def create_account(user_data: SingUpSchema):
             "lstClasses": [],
             "lstStudents": [],
         }
+
+        sendedEmail = send_email(
+            email,
+            "Welcome to Loritos World!",
+            "registeredAccount.html",
+        )
+
+        print(sendedEmail)
 
         # Agregar el documento a la colección
         db.collection("tDash_teacherData").document(user.uid).set(teacher_data)
@@ -61,6 +69,7 @@ async def create_account(user_data: SingUpSchema):
             status_code=500,
             detail=f"Error al crear cuenta y documento de profesor: {str(e)}",
         )
+
 
 @router.post("/login")
 async def create_acces_token(user_data: LoginSchema):
@@ -83,25 +92,29 @@ async def create_acces_token(user_data: LoginSchema):
             detail="Credenciales incorrectas.",
         )
 
+
 @router.post("/ping")
 async def validate_token(request: Request):
+    print("USUARIO", request)
     headers = request.headers
     jwt = headers.get("authorization")
 
     user = auth.verify_id_token(jwt)
     print("USUARIO", user)
     verificacion = is_email_verified(user["user_id"])
+    print("USUARIO", verificacion)
     if verificacion == True:
         print("Email verificado")
     else:
-        print("Se requiere verificacion")
-        send_email_verification(user["email"], user["name"])
+        print("Se requiere verificacion", user["email"])
+        send_email_verification(user["email"])
         print("Se ha enviado un correo de verificacion")
 
     return JSONResponse(
         content={"userId": user["user_id"], "email_verified": verificacion},
         status_code=200,
     )
+
 
 @router.post("/lost_password")
 async def lost_password(forgotPass: ForgotPassword):
