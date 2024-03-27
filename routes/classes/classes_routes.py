@@ -39,6 +39,11 @@ async def create_classes(classes_add: ClassesAdd):
         }
 
         new_class_ref = db.collection("tDash_class").add(class_data)
+        new_class_id = new_class_ref[1].id
+
+        class_data["id"] = new_class_id
+
+        db.collection("tDash_class").document(new_class_id).set(class_data)
 
         teacher_data_ref = db.collection("tDash_teacherData").document(
             classes_add.idTeacher
@@ -48,12 +53,13 @@ async def create_classes(classes_add: ClassesAdd):
         if teacher_doc.exists:
             lst_classes = teacher_doc.to_dict().get("lstClasses", [])
 
-            lst_classes.append(new_class_ref[1].id)
+            lst_classes.append(new_class_id)
 
             teacher_data_ref.update({"lstClasses": lst_classes})
 
         return JSONResponse(
-            content={"message": "Clase creada correctamente"}, status_code=201
+            content={"message": "Clase creada correctamente", "class_id": new_class_id},
+            status_code=201,
         )
     except Exception as e:
         raise HTTPException(
@@ -62,13 +68,26 @@ async def create_classes(classes_add: ClassesAdd):
 
 
 @router.get("/")
-async def get_classes():
+async def get_classes(teacherID: str):
     try:
-        collection_ref = db.collection("tDash_class")
-        docs = collection_ref.stream()
-        classes_data = []
+        teacher_ref = db.collection("tDash_teacherData").document(teacherID)
+        teacher_doc = teacher_ref.get()
 
-        for doc in docs:
+        if not teacher_doc.exists:
+            raise HTTPException(
+                status_code=404, detail=f"No se encontró el profesor con ID {teacherID}"
+            )
+
+        teacher_data = teacher_doc.to_dict()
+        lst_classes_ids = teacher_data.get("lstClasses", [])
+        print("Clases", lst_classes_ids)
+        classes_ref = db.collection("tDash_class").where("id", "in", lst_classes_ids)
+        classes_docs = classes_ref.stream()
+
+        classes_data = []
+        print("classes_data", classes_data)
+
+        for doc in classes_docs:
             class_data = doc.to_dict()
             if "createdDate" in class_data:
                 class_data["createdDate"] = class_data["createdDate"].strftime(
@@ -82,6 +101,7 @@ async def get_classes():
             classes_data.append(class_data)
 
         return JSONResponse(content={"data": classes_data}, status_code=200)
+
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al obtener las clases: {str(e)}"

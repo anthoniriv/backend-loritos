@@ -139,15 +139,6 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 merge=True,
             )
 
-            dataForEmail = {
-                "subscriptionData": {
-                    "subscriptionId": session["subscription"],
-                    "renewDate": renewDate,
-                    "activeSus": activeSus,
-                },
-                "urlInvoice": urlInvoice,
-            }
-
             sendedEmail = send_email(
                 teacher_data["email"],
                 "Suscription Owned",
@@ -191,6 +182,8 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
             cancelSuscription.userId
         )
 
+        teacher_data = teacher_data_ref.get().to_dict()
+
         teacher_data_doc = teacher_data_ref.get()
         if not teacher_data_doc.exists:
             raise HTTPException(
@@ -222,11 +215,19 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
         if (
             "subscriptionId" in subscription_data
         ):  # Verifica si hay datos en subscription_data
-            print("asdasdas", subscription_data["subscriptionId"])
+            print("asdasdas2", subscription_data["subscriptionId"])
             stripe.Subscription.cancel(subscription_data["subscriptionId"])
             teacher_data_ref.collection("tDash_subscriptionData").document(
                 idDoc
             ).delete()
+
+            sendedEmail = send_email(
+                teacher_data["email"],
+                "Suscription Cancelled",
+                "canceledSuscription.html",
+            )
+
+            print(sendedEmail)
         else:
             teacher_data_ref.collection("tDash_subscriptionData").document(
                 idDoc
