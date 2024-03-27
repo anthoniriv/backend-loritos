@@ -164,14 +164,6 @@ async def edit_student(student_data: EditStudentRequest):
                 update_data["name"] = student_data.name
             if student_data.avatarCode is not None:
                 update_data["avatarCode"] = student_data.avatarCode
-            if student_data.currentCoins is not None:
-                update_data["currentCoins"] = student_data.currentCoins
-            if student_data.totalCoinsWin is not None:
-                update_data["totalCoinsWin"] = student_data.totalCoinsWin
-            if student_data.lastConnection is not None:
-                update_data["lastConnection"] = student_data.lastConnection
-            if student_data.lstProgress is not None:
-                update_data["lstProgress"] = student_data.lstProgress
 
             students_collection.document(student_docs[0].id).update(update_data)
 

@@ -10,6 +10,7 @@ from fastapi.exceptions import HTTPException
 from models import (
     ClassId,
     ClassesAdd,
+    EditClassRequest,
     IdClass,
     StudentClassAdd,
     StudentClassDel,
@@ -470,4 +471,34 @@ async def get_student_progress(studentProgressData: StudentProgressRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Error al obtener el progreso del estudiante: {str(e)}",
+        )
+
+
+@router.post("/editClass")
+async def edit_class(editClassRequest: EditClassRequest):
+    try:
+        id_class = editClassRequest.idClass
+
+        new_class_name = editClassRequest.newClassName
+
+        class_ref = db.collection("tDash_classes").document(id_class)
+        class_doc = class_ref.get()
+
+        if class_doc.exists:
+            class_ref.update({"className": new_class_name})
+
+            return JSONResponse(
+                content={"message": "Nombre de clase actualizado correctamente"},
+                status_code=200,
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró la clase con ID {id_class}",
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al editar el nombre de la clase: {str(e)}",
         )

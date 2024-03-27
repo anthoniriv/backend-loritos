@@ -10,6 +10,7 @@ from models import (
 
 router = APIRouter()
 
+
 @router.post("/changePassword")
 async def change_teacher_password(changePassword: ChangePasswordRequest):
     try:
@@ -25,6 +26,7 @@ async def change_teacher_password(changePassword: ChangePasswordRequest):
         raise HTTPException(
             status_code=500, detail=f"Error al cambiar la contraseña: {str(e)}"
         )
+
 
 @router.post("/getData")
 async def get_teacher_data(teacherData: SearchTeacherSchema):
@@ -83,3 +85,8 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener datos del profesor: {str(e)}"
         )
+
+
+@router.post("/deleteAccount")
+async def del_acc_teacher(teacherData: SearchTeacherSchema):
+    pass

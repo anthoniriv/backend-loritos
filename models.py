@@ -96,3 +96,7 @@ class StudentProgressRequest(BaseModel):
 
 class IdClass(BaseModel):
     idClass: str
+
+class EditClassRequest(BaseModel):
+    idClass: str
+    className: str
