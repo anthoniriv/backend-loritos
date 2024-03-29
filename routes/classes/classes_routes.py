@@ -362,21 +362,18 @@ async def get_lst_unit_classes(idClass: IdClass):
         class_doc = db.collection("tDash_class").document(idClass.idClass).get()
 
         if class_doc.exists:
-            class_id = class_doc.id
-
             lst_units = class_doc.to_dict().get("lstUnits", [])
 
             units_data = []
+            units_docs = db.collection("tDash_content").where("__name__", "in", lst_units).stream()
 
-            for unit_id in lst_units:
-                unit_doc = db.collection("tDash_content").document(unit_id).get()
-                if unit_doc.exists:
-                    unit_id = unit_doc.id
+            for unit_doc in units_docs:
+                unit_data = unit_doc.to_dict()
+                unit_id = unit_doc.id
 
-                    unit_data = unit_doc.to_dict()
-                    unit_data["id"] = unit_id
+                unit_data["id"] = unit_id
 
-                    units_data.append(unit_data)
+                units_data.append(unit_data)
 
             return JSONResponse(content={"units": units_data}, status_code=200)
         else:

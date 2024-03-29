@@ -6,6 +6,7 @@ from models import GetContent
 
 router = APIRouter()
 
+
 @router.post("/listContent")
 async def get_type_content(contentID: GetContent):
     try:
@@ -23,9 +24,9 @@ async def get_type_content(contentID: GetContent):
             doc_data = doc.to_dict()
             content_item = {
                 "id": doc.id,
-                "name": doc_data["name"],
-                "description": doc_data["description"],
-                "typeContent": doc_data["typeContent"],
+                "name": doc_data.get("name", ""),
+                "description": doc_data.get("description", ""),
+                "typeContent": doc_data.get("typeContent", ""),
                 "content": {"listDocuments": [], "listContent": []},
             }
 
