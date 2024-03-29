@@ -330,17 +330,17 @@ async def get_lst_student_classes(idClass: IdClass):
             lst_students = class_doc.to_dict().get("lstStudents", [])
 
             students_data = []
+            students_docs = db.collection("tDash_students").where("__name__", "in", lst_students).stream()
 
-            for student_id in lst_students:
-                student_doc = db.collection("tDash_students").document(student_id).get()
-                if student_doc.exists:
-                    student_data = student_doc.to_dict()
+            for student_doc in students_docs:
+                student_data = student_doc.to_dict()
 
-                    for key, value in student_data.items():
-                        if isinstance(value, datetime):
-                            student_data[key] = value.strftime("%Y-%m-%d %H:%M:%S")
+                # Convertir fechas si es necesario
+                for key, value in student_data.items():
+                    if isinstance(value, datetime):
+                        student_data[key] = value.isoformat()
 
-                    students_data.append(student_data)
+                students_data.append(student_data)
 
             return JSONResponse(content={"students": students_data}, status_code=200)
         else:
