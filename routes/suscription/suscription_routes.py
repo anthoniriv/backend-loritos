@@ -22,9 +22,9 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
 
     try:
         session = stripe.checkout.Session.create(
-            success_url="http://localhost:4200/main/subscription/success?id_plan="
+            success_url="http://localhost:4200/subscription/success?id_plan="
             + sessionCheckoutCreate.idPlan,
-            cancel_url="http://localhost:4200/main/subscription/canceled",
+            cancel_url="http://localhost:4200/subscription/canceled",
             line_items=[
                 {
                     "price": sessionCheckoutCreate.stripePriceId,
@@ -297,9 +297,9 @@ async def payment_webhook(webhook: Optional[dict] = None):
                     },
                     status_code=200,
                 )
-        elif webhook["type"] == "invoice.payment_failed":
+        elif webhook["type"] == "customer.subscription.deleted":
 
-            print("Suscripción cancelada correctamente", webhook["object"])
+            print("Suscripción cancelada correctamente", webhook)
         else:
             # Si no se proporcionaron datos en el webhook, imprime un mensaje de advertencia
             print("No se proporcionaron datos en el webhook.")

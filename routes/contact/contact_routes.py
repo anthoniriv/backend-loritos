@@ -9,7 +9,7 @@ from fastapi.exceptions import HTTPException
 
 router = APIRouter()
 
-@app.post("/sendMessage")
+@router.post("/sendMessage")
 async def send_contact_message(contact_data: ContactMessage):
     try:
         email = "usuarionumeroseis@gmail.com"

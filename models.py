@@ -42,7 +42,7 @@ class EditStudentRequest(BaseModel):
         pre = True
 
 class DeleteStudentRequest(BaseModel):
-    id: str
+    ids: str
 
 class GetStudentDataRequest(BaseModel):
     student_id: str
