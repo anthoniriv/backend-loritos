@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from config import db, firestore
@@ -188,29 +188,40 @@ async def get_progress_student():
 
 
 @router.post("/delete")
-async def delete_student(delete_data: DeleteStudentRequest):
+async def delete_students(delete_data: DeleteStudentRequest):
     try:
-        student_id = delete_data.id
+        student_ids = delete_data.ids.split(',')  # Separar los IDs por comas
 
         students_collection = db.collection("tDash_students")
 
-        query = students_collection.where("id", "==", student_id).limit(1)
-        query_result = query.stream()
+        # Inicializar una lista para almacenar los IDs de estudiantes eliminados
+        deleted_student_ids = []
 
-        student_docs = list(query_result)
-        if student_docs:
-            students_collection.document(student_docs[0].id).delete()
+        for student_id in student_ids:
+            # Realizar una consulta para encontrar el estudiante con el ID actual
+            query = students_collection.where("id", "==", student_id).limit(1)
+            query_result = query.stream()
 
+            student_docs = list(query_result)
+            if student_docs:
+                # Si se encuentra el estudiante, eliminarlo y agregar su ID a la lista de eliminados
+                students_collection.document(student_docs[0].id).delete()
+                deleted_student_ids.append(student_id)
+
+        if deleted_student_ids:
+            # Si se eliminaron estudiantes, devolver un mensaje con los IDs eliminados
             return JSONResponse(
-                content={"message": "Estudiante eliminado exitosamente"},
+                content={"message": "Estudiantes eliminados exitosamente", "deleted_ids": deleted_student_ids},
                 status_code=200,
             )
         else:
+            # Si no se encuentra ningún estudiante con los IDs proporcionados, devolver un error
             raise HTTPException(
-                status_code=404, detail=f"Estudiante con ID {student_id} no encontrado"
+                status_code=404, detail="No se encontraron estudiantes con los IDs proporcionados"
             )
 
     except Exception as e:
+        # Manejar cualquier error interno y devolver un mensaje de error
         raise HTTPException(
-            status_code=500, detail=f"Error al eliminar estudiante: {str(e)}"
+            status_code=500, detail=f"Error al eliminar estudiantes: {str(e)}"
         )

@@ -313,7 +313,7 @@ async def payment_webhook(webhook: Optional[dict] = None):
 
 
 @router.get("/plans")
-async def get_subscription_plans_route(plan_id: str = None):
+async def get_subscription_plans_route(plan_id: Optional[str] = None):
     try:
         # Consultar la colección de planes
         plans_ref = db.collection("tDash_plans")
@@ -332,26 +332,36 @@ async def get_subscription_plans_route(plan_id: str = None):
                     status_code=404, detail=f"No se encontró el plan con ID {plan_id}"
                 )
         else:
-            # Inicializar listas para planes mensuales y anuales
+            # Inicializar listas para planes mensuales, anuales y gratuitos
             plans_mensuales = []
             plans_anuales = []
+            plans_gratuitos = []
 
             # Iterar sobre los documentos de la colección
             for doc in plans_ref.stream():
                 plan_data = doc.to_dict()
                 type_plan = plan_data.get("type_plan")
+                order = plan_data.get("order")
 
-                # Agregar el plan a la lista correspondiente según su tipo
-                if type_plan == 1:
+                # Determinar la lista en la que agregar el plan según su tipo
+                if type_plan == 0:
+                    plans_gratuitos.append(plan_data)
+                elif type_plan == 1:
                     plans_mensuales.append(plan_data)
-                else:
+                elif type_plan == 2:
                     plans_anuales.append(plan_data)
+
+            # Ordenar las listas según el valor de "order"
+            plans_mensuales.sort(key=lambda x: x.get("order", float("inf")))
+            plans_anuales.sort(key=lambda x: x.get("order", float("inf")))
+            plans_gratuitos.sort(key=lambda x: x.get("order", float("inf")))
 
             # Devolver los planes organizados como listas
             return JSONResponse(
                 content={
                     "plans_mensuales": plans_mensuales,
                     "plans_anuales": plans_anuales,
+                    "plans_gratuitos": plans_gratuitos,
                 },
                 status_code=200,
             )
