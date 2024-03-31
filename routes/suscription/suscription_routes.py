@@ -298,8 +298,30 @@ async def payment_webhook(webhook: Optional[dict] = None):
                     status_code=200,
                 )
         elif webhook["type"] == "customer.subscription.deleted":
-
             print("Suscripción cancelada correctamente", webhook)
+
+            if webhook["data"]["object"]["cancellation_details"]["reason"] == "payment_failed":
+                user = stripe.Customer.retrieve(webhook["data"]["object"]["customer"])
+                print('Email subscripcion', user["email"])
+                print("Cancelado por error de metodo de pago")
+                # Consultar la colección 'tDash_teacherData' para encontrar el documento con el email del usuario
+                teacher_docs = db.collection("tDash_teacherData").where("email", "==", user["email"]).limit(1).stream()
+                print('Usuario obtenido de bd', teacher_docs)
+                # Actualizar el valor de 'hasSuscription' a False si se encontró el documento
+                for doc in teacher_docs:
+                    print('documento', teacher_docs)
+                    doc.reference.update({"hasSuscription": False})
+
+                if teacher_docs:
+                    teacher_ref = doc.reference
+                    subscription_ref = teacher_ref.collection("tDash_subscriptionData")
+
+                    batch = db.batch()
+                    subscription_docs = subscription_ref.stream()
+                    for sub_doc in subscription_docs:
+                        batch.delete(sub_doc.reference)
+                    batch.commit()
+
         else:
             # Si no se proporcionaron datos en el webhook, imprime un mensaje de advertencia
             print("No se proporcionaron datos en el webhook.")
