@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from config import db, firestore
@@ -21,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 @router.get("/")
-async def get_all_students(teacherID: str, hasClass: bool = True):
+async def get_all_students(teacherID: str, hasClass: Optional[bool] = None):
     try:
         teacher_ref = db.collection("tDash_teacherData").document(teacherID)
         teacher_doc = teacher_ref.get()
@@ -33,22 +34,21 @@ async def get_all_students(teacherID: str, hasClass: bool = True):
 
         teacher_data = teacher_doc.to_dict()
         lst_students_ids = teacher_data.get("lstStudents", [])
-        print("lst_students_ids", lst_students_ids)
+
+        # Obtener todos los estudiantes
         students_ref = db.collection("tDash_students").where(
             "id", "in", lst_students_ids
         )
         students_docs = students_ref.stream()
-        print("students_docs", students_docs)
 
         # Función para procesar un documento de estudiante
         def process_student_doc(student_doc):
             student_data = student_doc.to_dict()
-
             has_class = bool(student_data.get("className", ""))
-            if hasClass:
-                return student_data if has_class else None
+            if hasClass is None or has_class == hasClass:
+                return student_data
             else:
-                return student_data if not has_class else None
+                return None
 
         with ThreadPoolExecutor() as executor:
             processed_students = list(executor.map(process_student_doc, students_docs))

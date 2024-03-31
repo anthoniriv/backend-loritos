@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from typing import Optional
 from config import app, db, stripe
 
 import stripe
@@ -143,10 +144,10 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 teacher_data["email"],
                 "Suscription Owned",
                 "newSuscription.html",
-                subscriptionId = session["subscription"],
-                renewDate = renewDate,
-                activeSus = activeSus,
-                urlInvoice = urlInvoice
+                subscriptionId=session["subscription"],
+                renewDate=renewDate,
+                activeSus=activeSus,
+                urlInvoice=urlInvoice,
             )
 
             print(sendedEmail)
@@ -240,6 +241,73 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=500, detail=f"Error de Stripe: {e}")
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
+
+@router.post("/webhook")
+async def payment_webhook(webhook: Optional[dict] = None):
+    try:
+        print("EEVENTOtipo", webhook["type"])
+        if webhook["type"] == "invoice.payment_failed":
+            print("EEVENTOtipo", webhook["type"])
+            print("EEVENTO", webhook)
+            # Verifica si el evento es del tipo 'invoice.payment_failed'
+            if webhook["type"] == "invoice.payment_failed":
+                # Almacena el ID de la suscripción de Stripe
+                subscription_id = webhook["data"]["object"]["id"]
+                print("subscription_id", subscription_id)
+                # Verifica si la suscripción existe en Stripe
+                # subscription = stripe.SubscriptionItem.retrieve(subscription_id)
+
+                # Verifica si el campo 'attempt_count' es igual a 1
+                if webhook["data"]["object"]["attempt_count"] == 1:
+                    # TODO: Enviar correo de aviso
+                    # print('subscription', subscription)
+                    # Retorna una respuesta exitosa
+                    print("attempt_count", 1)
+                    return JSONResponse(
+                        content={"message": "Webhook procesado correctamente"},
+                        status_code=200,
+                    )
+                # Verifica si el campo 'attempt_count' es igual a 3
+                elif webhook["data"]["object"]["attempt_count"] == 4:
+                    # Cancela la suscripción en Stripe
+                    # stripe.Subscription.delete(subscription_id)
+
+                    print("attempt_count", 4)
+                    # Retorna una respuesta exitosa
+                    return JSONResponse(
+                        content={"message": "Suscripción cancelada correctamente"},
+                        status_code=200,
+                    )
+                else:
+                    # Si no se cumple ninguna de las condiciones anteriores, retorna una respuesta exitosa
+                    return JSONResponse(
+                        content={
+                            "message": "Evento recibido pero no se requiere acción"
+                        },
+                        status_code=200,
+                    )
+            else:
+                # Si el evento no es del tipo 'invoice.payment_failed', no se requiere acción
+                return JSONResponse(
+                    content={
+                        "message": "Evento no relacionado con pago fallido, no se requiere acción"
+                    },
+                    status_code=200,
+                )
+        elif webhook["type"] == "invoice.payment_failed":
+
+            print("Suscripción cancelada correctamente", webhook["object"])
+        else:
+            # Si no se proporcionaron datos en el webhook, imprime un mensaje de advertencia
+            print("No se proporcionaron datos en el webhook.")
+
+        # Retorna una respuesta exitosa
+        return JSONResponse(
+            content={"message": "Webhook recibido correctamente"}, status_code=200
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
