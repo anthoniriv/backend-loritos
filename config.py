@@ -45,7 +45,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # Configurar Stripe
 stripe.api_key = "sk_test_51OWfnCE2m10pao8Wef972QeOaQwARpi6KttQreupbOlAJr88Wd8h7bR3H6dVxlzCzpzks7QUtOH2QtyVp6O6dslv00ixss1JNC"
 
+
 SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
-SMTP_USERNAME = "anthoniriv01@gmail.com"
-SMTP_PASSWORD = "9AjfVh2mrnOCZsFw"
+SMTP_USERNAME = "devteampe@gmail.com"
+SMTP_PASSWORD = "leaj tdaz vnfg teeb"

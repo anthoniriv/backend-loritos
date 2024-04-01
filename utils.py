@@ -37,7 +37,8 @@ def send_email(to_email, subject, template_name, **kwargs):
 
         message.attach(MIMEText(html_content, "html"))
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with smtplib.SMTP('smtp.gmail.com:587') as server:
+            server.ehlo('Gmail')
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.sendmail(SMTP_USERNAME, to_email, message.as_string())
