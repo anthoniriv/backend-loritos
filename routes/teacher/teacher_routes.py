@@ -89,4 +89,62 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
 
 @router.post("/deleteAccount")
 async def del_acc_teacher(teacherData: SearchTeacherSchema):
-    pass
+    try:
+        # Obtener el documento a eliminar de tDash_teacherData
+        teacher_doc_ref = db.collection("tDash_teacherData").document(
+            teacherData.teacherID
+        )
+        teacher_doc = teacher_doc_ref.get()
+
+        if not teacher_doc.exists:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No se encontró el profesor con ID {teacherData.teacherID}",
+            )
+
+        # Obtener las listas de clases y estudiantes del profesor
+        lst_classes = teacher_doc.to_dict().get("lstClasses", [])
+        lst_students = teacher_doc.to_dict().get("lstStudents", [])
+
+        # Eliminar todas las clases del profesor de la colección tDash_class
+        for class_id in lst_classes:
+            class_ref = db.collection("tDash_class").document(class_id)
+            class_ref.delete()
+
+        # Eliminar a los estudiantes del profesor de la colección tDash_students
+        for student_id in lst_students:
+            student_ref = db.collection("tDash_students").document(student_id)
+            student_ref.delete()
+
+        # Eliminar las referencias a los estudiantes del profesor en tDash_classStudentData
+        class_student_data_ref = db.collection("tDash_classStudentData")
+        class_student_data_query = class_student_data_ref.where(
+            "idStudent", "in", lst_students
+        )
+        class_student_data_docs = class_student_data_query.stream()
+
+        for doc in class_student_data_docs:
+            doc_ref = class_student_data_ref.document(doc.id)
+            doc_ref.delete()
+
+        # Eliminar el usuario del módulo de autenticación de Firebase
+        auth.delete_user(teacherData.teacherID)
+
+        # Eliminar el documento del profesor de tDash_teacherData
+        teacher_doc_ref.delete()
+
+        return JSONResponse(
+            content={"message": "Cuenta de profesor eliminada correctamente"},
+            status_code=200,
+        )
+
+    except auth.AuthError as e:
+        # Maneja los errores relacionados con la autenticación de Firebase
+        raise HTTPException(
+            status_code=500, detail=f"Error de autenticación de Firebase: {e}"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al eliminar la cuenta de profesor: {str(e)}"
+        )
