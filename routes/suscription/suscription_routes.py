@@ -229,6 +229,9 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
             )
 
             print(sendedEmail)
+
+            # Actualizar el valor de 'hasSuscription' a False después de cancelar la suscripción
+            teacher_data_ref.update({"hasSuscription": False})
         else:
             teacher_data_ref.collection("tDash_subscriptionData").document(
                 idDoc
@@ -300,16 +303,24 @@ async def payment_webhook(webhook: Optional[dict] = None):
         elif webhook["type"] == "customer.subscription.deleted":
             print("Suscripción cancelada correctamente", webhook)
 
-            if webhook["data"]["object"]["cancellation_details"]["reason"] == "payment_failed":
+            if (
+                webhook["data"]["object"]["cancellation_details"]["reason"]
+                == "payment_failed"
+            ):
                 user = stripe.Customer.retrieve(webhook["data"]["object"]["customer"])
-                print('Email subscripcion', user["email"])
+                print("Email subscripcion", user["email"])
                 print("Cancelado por error de metodo de pago")
                 # Consultar la colección 'tDash_teacherData' para encontrar el documento con el email del usuario
-                teacher_docs = db.collection("tDash_teacherData").where("email", "==", user["email"]).limit(1).stream()
-                print('Usuario obtenido de bd', teacher_docs)
+                teacher_docs = (
+                    db.collection("tDash_teacherData")
+                    .where("email", "==", user["email"])
+                    .limit(1)
+                    .stream()
+                )
+                print("Usuario obtenido de bd", teacher_docs)
                 # Actualizar el valor de 'hasSuscription' a False si se encontró el documento
                 for doc in teacher_docs:
-                    print('documento', teacher_docs)
+                    print("documento", teacher_docs)
                     doc.reference.update({"hasSuscription": False})
 
                 if teacher_docs:
