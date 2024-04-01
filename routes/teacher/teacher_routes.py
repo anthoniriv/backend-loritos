@@ -1,5 +1,6 @@
 from datetime import datetime
 from config import db, auth
+from utils import send_email
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -130,9 +131,16 @@ async def del_acc_teacher(teacherData: SearchTeacherSchema):
         # Eliminar el usuario del módulo de autenticación de Firebase
         auth.delete_user(teacherData.teacherID)
 
+
+        sendedEmail = send_email(
+            teacher_doc.to_dict()["email"],
+            "Deleted Account",
+            "deleteAccount.html",
+        )
+
+        print("Email", sendedEmail)
         # Eliminar el documento del profesor de tDash_teacherData
         teacher_doc_ref.delete()
-
         return JSONResponse(
             content={"message": "Cuenta de profesor eliminada correctamente"},
             status_code=200,

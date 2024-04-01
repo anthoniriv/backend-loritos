@@ -209,11 +209,22 @@ async def delete_students(delete_data: DeleteStudentRequest):
                 deleted_student_ids.append(student_id)
 
         if deleted_student_ids:
-            # Si se eliminaron estudiantes, devolver un mensaje con los IDs eliminados
-            return JSONResponse(
-                content={"message": "Estudiantes eliminados exitosamente", "deleted_ids": deleted_student_ids},
-                status_code=200,
-            )
+            # Si se eliminaron estudiantes, actualizar el documento en tDash_teacherData
+            teacher_id = delete_data.teacherId  # Reemplaza con el ID del maestro correspondiente
+            teacher_data_ref = db.collection("tDash_teacherData").document(teacher_id)
+            teacher_data = teacher_data_ref.get().to_dict()
+
+            if teacher_data:
+                # Eliminar los IDs de estudiantes de la lista lstStudents en el documento
+                lst_students = teacher_data.get("lstStudents", [])
+                for student_id in deleted_student_ids:
+                    if student_id in lst_students:
+                        lst_students.remove(student_id)
+
+                # Actualizar el documento con la lista de estudiantes actualizada
+                teacher_data_ref.update({"lstStudents": lst_students})
+
+            return {"message": "Estudiantes eliminados exitosamente", "deleted_ids": deleted_student_ids}
         else:
             # Si no se encuentra ningún estudiante con los IDs proporcionados, devolver un error
             raise HTTPException(

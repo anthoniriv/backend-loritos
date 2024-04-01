@@ -43,6 +43,7 @@ class EditStudentRequest(BaseModel):
 
 class DeleteStudentRequest(BaseModel):
     ids: str
+    teacherId: str
 
 class GetStudentDataRequest(BaseModel):
     student_id: str
