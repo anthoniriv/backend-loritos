@@ -11,7 +11,7 @@ from fastapi.requests import Request
 from firebase_admin import auth
 
 from utils import is_email_verified, send_email_verification, send_email
-from config import app, db, firebase
+from config import db, firebase
 
 router = APIRouter()
 

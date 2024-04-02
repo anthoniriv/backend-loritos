@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import Optional
-from config import app, db, stripe
+from config import db, stripe
 
 import stripe
 from datetime import datetime

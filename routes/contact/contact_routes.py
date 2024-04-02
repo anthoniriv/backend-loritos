@@ -1,4 +1,3 @@
-from config import app
 from utils import send_email
 from fastapi import APIRouter
 from models import (

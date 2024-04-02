@@ -1,4 +1,4 @@
-from config import app, db
+from config import db
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
