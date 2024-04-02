@@ -3,13 +3,8 @@ from firebase_admin import credentials, firestore
 import pyrebase
 import stripe
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from firebase_admin import credentials, auth, firestore
-
-app = FastAPI(
-    description="This is a loritos backend", title="LoritosBackend", docs_url="/"
-)
 
 # Configurar Firebase
 if not firebase_admin._apps:
@@ -30,15 +25,6 @@ firebaseConfig = {
 firebase = pyrebase.initialize_app(firebaseConfig)
 fb_storage = firebase.storage()
 db = firestore.client()
-
-# Configurar FastAPI
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # You can specify your allowed origins here
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
