@@ -104,55 +104,62 @@ async def del_acc_teacher(teacherData: SearchTeacherSchema):
             )
 
         # Obtener las listas de clases y estudiantes del profesor
-        lst_classes = teacher_doc.to_dict().get("lstClasses", [])
-        lst_students = teacher_doc.to_dict().get("lstStudents", [])
+        lst_classes = teacher_doc.to_dict().get("lstClasses")
+        lst_students = teacher_doc.to_dict().get("lstStudents")
 
-        # Eliminar todas las clases del profesor de la colección tDash_class
-        for class_id in lst_classes:
-            class_ref = db.collection("tDash_class").document(class_id)
-            class_ref.delete()
+        if lst_classes:
+            # Eliminar todas las clases del profesor de la colección tDash_class
+            for class_id in lst_classes:
+                class_ref = db.collection("tDash_class").document(class_id)
+                class_ref.delete()
 
-        # Eliminar a los estudiantes del profesor de la colección tDash_students
-        for student_id in lst_students:
-            student_ref = db.collection("tDash_students").document(student_id)
-            student_ref.delete()
+        if lst_students:
+            # Eliminar a los estudiantes del profesor de la colección tDash_students
+            for student_id in lst_students:
+                if student_id:
+                    student_ref = db.collection("tDash_students").document(student_id)
+                    student_ref.delete()
 
-        # Eliminar las referencias a los estudiantes del profesor en tDash_classStudentData
-        class_student_data_ref = db.collection("tDash_classStudentData")
-        class_student_data_query = class_student_data_ref.where(
-            "idStudent", "in", lst_students
-        )
-        class_student_data_docs = class_student_data_query.stream()
+            # Eliminar las referencias a los estudiantes del profesor en tDash_classStudentData
+            class_student_data_ref = db.collection("tDash_classStudentData")
+            class_student_data_query = class_student_data_ref.where(
+                "idStudent", "in", lst_students
+            )
+            class_student_data_docs = class_student_data_query.stream()
 
-        for doc in class_student_data_docs:
-            doc_ref = class_student_data_ref.document(doc.id)
-            doc_ref.delete()
+            if class_student_data_docs:
+                for doc in class_student_data_docs:
+                    student_id = doc.to_dict().get("idStudent")
+                    if student_id:
+                        doc_ref = class_student_data_ref.document(doc.id)
+                        doc_ref.delete()
 
         # Eliminar el usuario del módulo de autenticación de Firebase
         auth.delete_user(teacherData.teacherID)
 
+        # Enviar correo electrónico de confirmación
+        if teacher_doc.exists and teacher_doc.to_dict().get("email"):
+            sendedEmail = send_email(
+                teacher_doc.to_dict()["email"],
+                "Deleted Account",
+                "deleteAccount.html",
+            )
 
-        sendedEmail = send_email(
-            teacher_doc.to_dict()["email"],
-            "Deleted Account",
-            "deleteAccount.html",
-        )
+            print("Email", sendedEmail)
 
-        print("Email", sendedEmail)
         # Eliminar el documento del profesor de tDash_teacherData
         teacher_doc_ref.delete()
+
         return JSONResponse(
             content={"message": "Cuenta de profesor eliminada correctamente"},
             status_code=200,
         )
 
-    except auth.AuthError as e:
-        # Maneja los errores relacionados con la autenticación de Firebase
-        raise HTTPException(
-            status_code=500, detail=f"Error de autenticación de Firebase: {e}"
-        )
+    except HTTPException as e:
+        raise e
 
     except Exception as e:
+        # Manejar otros errores inesperados
         raise HTTPException(
             status_code=500, detail=f"Error al eliminar la cuenta de profesor: {str(e)}"
         )
