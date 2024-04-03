@@ -3,11 +3,12 @@ from typing import Optional
 from config import db, stripe
 
 import stripe
-from datetime import datetime
+from datetime import datetime, timedelta
 from models import (
     CancelSuscription,
     SessionCheckoutCreate,
     SessionStripeCheck,
+    SubscribeTeacher,
 )
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.exceptions import HTTPException
@@ -251,96 +252,41 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
 @router.post("/webhook")
 async def payment_webhook(webhook: Optional[dict] = None):
     try:
-        print("EEVENTOtipo", webhook["type"])
         if webhook["type"] == "invoice.payment_failed":
-            print("EEVENTOtipo", webhook["type"])
-            print("EEVENTO", webhook)
-            # Verifica si el evento es del tipo 'invoice.payment_failed'
             if webhook["type"] == "invoice.payment_failed":
-                # Almacena el ID de la suscripción de Stripe
                 subscription_id = webhook["data"]["object"]["id"]
-                print("subscription_id", subscription_id)
-                # Verifica si la suscripción existe en Stripe
-                # subscription = stripe.SubscriptionItem.retrieve(subscription_id)
-
-                # Verifica si el campo 'attempt_count' es igual a 1
                 if webhook["data"]["object"]["attempt_count"] == 1:
-                    # TODO: Enviar correo de aviso
-                    # print('subscription', subscription)
-                    # Retorna una respuesta exitosa
                     print("attempt_count", 1)
-                    return JSONResponse(
-                        content={"message": "Webhook procesado correctamente"},
-                        status_code=200,
-                    )
-                # Verifica si el campo 'attempt_count' es igual a 3
+                    return JSONResponse(content={"message": "Webhook procesado correctamente"}, status_code=200)
                 elif webhook["data"]["object"]["attempt_count"] == 4:
-                    # Cancela la suscripción en Stripe
-                    # stripe.Subscription.delete(subscription_id)
-
                     print("attempt_count", 4)
-                    # Retorna una respuesta exitosa
-                    return JSONResponse(
-                        content={"message": "Suscripción cancelada correctamente"},
-                        status_code=200,
-                    )
+                    return JSONResponse(content={"message": "Suscripción cancelada correctamente"}, status_code=200)
                 else:
-                    # Si no se cumple ninguna de las condiciones anteriores, retorna una respuesta exitosa
-                    return JSONResponse(
-                        content={
-                            "message": "Evento recibido pero no se requiere acción"
-                        },
-                        status_code=200,
-                    )
+                    return JSONResponse(content={"message": "Evento recibido pero no se requiere acción"}, status_code=200)
             else:
-                # Si el evento no es del tipo 'invoice.payment_failed', no se requiere acción
-                return JSONResponse(
-                    content={
-                        "message": "Evento no relacionado con pago fallido, no se requiere acción"
-                    },
-                    status_code=200,
-                )
+                return JSONResponse(content={"message": "Evento no relacionado con pago fallido, no se requiere acción"}, status_code=200)
         elif webhook["type"] == "customer.subscription.deleted":
             print("Suscripción cancelada correctamente", webhook)
-
-            if (
-                webhook["data"]["object"]["cancellation_details"]["reason"]
-                == "payment_failed"
-            ):
+            if webhook["data"]["object"]["cancellation_details"]["reason"] == "payment_failed":
                 user = stripe.Customer.retrieve(webhook["data"]["object"]["customer"])
                 print("Email subscripcion", user["email"])
                 print("Cancelado por error de metodo de pago")
-                # Consultar la colección 'tDash_teacherData' para encontrar el documento con el email del usuario
-                teacher_docs = (
-                    db.collection("tDash_teacherData")
-                    .where("email", "==", user["email"])
-                    .limit(1)
-                    .stream()
-                )
+                teacher_docs = db.collection("tDash_teacherData").where("email", "==", user["email"]).limit(1).stream()
                 print("Usuario obtenido de bd", teacher_docs)
-                # Actualizar el valor de 'hasSuscription' a False si se encontró el documento
                 for doc in teacher_docs:
                     print("documento", teacher_docs)
                     doc.reference.update({"hasSuscription": False})
-
                 if teacher_docs:
                     teacher_ref = doc.reference
                     subscription_ref = teacher_ref.collection("tDash_subscriptionData")
-
                     batch = db.batch()
                     subscription_docs = subscription_ref.stream()
                     for sub_doc in subscription_docs:
                         batch.delete(sub_doc.reference)
                     batch.commit()
-
         else:
-            # Si no se proporcionaron datos en el webhook, imprime un mensaje de advertencia
             print("No se proporcionaron datos en el webhook.")
-
-        # Retorna una respuesta exitosa
-        return JSONResponse(
-            content={"message": "Webhook recibido correctamente"}, status_code=200
-        )
+        return JSONResponse(content={"message": "Webhook recibido correctamente"}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
@@ -404,3 +350,62 @@ async def get_subscription_plans_route(plan_id: Optional[str] = None):
             status_code=500,
             detail=f"Error al obtener los planes de suscripción: {str(e)}",
         )
+
+
+@router.post("/freeSubscribeTeacher")
+async def free_subscribe_teacher(subscribe_teacher: SubscribeTeacher):
+    """
+    Subscribe a teacher to a free plan.
+
+    Args:
+        subscribe_teacher (SubscribeTeacher): The subscription details.
+
+    Returns:
+        JSONResponse: The response message.
+    """
+    try:
+        # Check if there is an existing subscription with free_plan = True
+        existing_subscription = db.collection("tDash_teacherData").document(subscribe_teacher.teacherID).collection("tDash_subscriptionData").where("free_plan", "==", True).get()
+        if existing_subscription:
+            raise HTTPException(status_code=400, detail="Ya existe una suscripción gratuita para este profesor")
+
+        # Get the plan details from tDash_plans collection
+        plan_doc = db.collection("tDash_plans").document(subscribe_teacher.planID).get()
+        if not plan_doc.exists:
+            raise HTTPException(
+                status_code=404, detail=f"No se encontró el plan con ID {subscribe_teacher.planID}"
+            )
+
+        plan_data = plan_doc.to_dict()
+
+        # Calculate the expiration date (30 days from the current date)
+        expiration_date = datetime.now() + timedelta(days=30)
+
+        # Create the subscription data
+        subscription_data = {
+            "amount_total": plan_data["plan_price"],
+            "id_plan": subscribe_teacher.planID,
+            "status": "complete",
+            "fechaVencimiento": expiration_date,
+            "free_plan": True
+        }
+
+        # Create a new document in tDash_subscriptionData subcollection
+        subscription_ref = (
+            db.collection("tDash_teacherData")
+            .document(subscribe_teacher.teacherID)
+            .collection("tDash_subscriptionData")
+            .document()
+        )
+        subscription_ref.set(subscription_data)
+
+        # Update the hasSuscription value to True in tDash_teacherData collection
+        teacher_ref = db.collection("tDash_teacherData").document(subscribe_teacher.teacherID)
+        teacher_ref.update({"hasSuscription": True})
+
+        return JSONResponse(
+            content={"message": "Subscripción exitosa"}, status_code=200
+        )
+
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Error interno: {error}") from error

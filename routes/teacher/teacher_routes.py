@@ -7,33 +7,40 @@ from fastapi.exceptions import HTTPException
 from models import (
     SearchTeacherSchema,
     ChangePasswordRequest,
+    StudentsAmountSchema,
 )
 
 router = APIRouter()
 
 
 @router.post("/changePassword")
-async def change_teacher_password(changePassword: ChangePasswordRequest):
+async def change_teacher_password(change_password: ChangePasswordRequest):
+    """
+    Change teacher password.
+    """
     try:
         auth.update_user(
-            uid=changePassword.user_id, password=changePassword.new_password
+            uid=change_password.user_id, password=change_password.new_password
         )
-        doc_ref = db.collection("tDash_teacherData").document(changePassword.user_id)
-        doc_ref.update({"password": changePassword.new_password})
+        doc_ref = db.collection("tDash_teacherData").document(change_password.user_id)
+        doc_ref.update({"password": change_password.new_password})
         return JSONResponse(
             content={"message": "Contraseña cambiada exitosamente"}, status_code=200
         )
-    except Exception as e:
+    except Exception as error:
         raise HTTPException(
-            status_code=500, detail=f"Error al cambiar la contraseña: {str(e)}"
-        )
+            status_code=500, detail=f"Error al cambiar la contraseña: {str(error)}"
+        ) from error
 
 
 @router.post("/getData")
-async def get_teacher_data(teacherData: SearchTeacherSchema):
-    teacherID = teacherData.teacherID
+async def get_teacher_data(teacher_data: SearchTeacherSchema):
+    """
+    Get teacher data.
+    """
+    teacher_id = teacher_data.teacherID
     try:
-        teacher_ref = db.collection("tDash_teacherData").document(teacherID)
+        teacher_ref = db.collection("tDash_teacherData").document(teacher_id)
         teacher_doc = teacher_ref.get()
 
         if teacher_doc.exists:
@@ -79,48 +86,46 @@ async def get_teacher_data(teacherData: SearchTeacherSchema):
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"Datos del profesor con ID {teacherID} no encontrados",
+                detail=f"Datos del profesor con ID {teacher_id} no encontrados",
             )
 
-    except Exception as e:
+    except Exception as error:
         raise HTTPException(
-            status_code=500, detail=f"Error al obtener datos del profesor: {str(e)}"
-        )
+            status_code=500, detail=f"Error al obtener datos del profesor: {str(error)}"
+        ) from error
 
 
 @router.post("/deleteAccount")
-async def del_acc_teacher(teacherData: SearchTeacherSchema):
+async def del_acc_teacher(teacher_data: SearchTeacherSchema):
+    """
+    Delete teacher account.
+    """
     try:
-        # Obtener el documento a eliminar de tDash_teacherData
         teacher_doc_ref = db.collection("tDash_teacherData").document(
-            teacherData.teacherID
+            teacher_data.teacherID
         )
         teacher_doc = teacher_doc_ref.get()
 
         if not teacher_doc.exists:
             raise HTTPException(
                 status_code=404,
-                detail=f"No se encontró el profesor con ID {teacherData.teacherID}",
+                detail=f"No se encontró el profesor con ID {teacher_data.teacherID}",
             )
 
-        # Obtener las listas de clases y estudiantes del profesor
         lst_classes = teacher_doc.to_dict().get("lstClasses")
         lst_students = teacher_doc.to_dict().get("lstStudents")
 
         if lst_classes:
-            # Eliminar todas las clases del profesor de la colección tDash_class
             for class_id in lst_classes:
                 class_ref = db.collection("tDash_class").document(class_id)
                 class_ref.delete()
 
         if lst_students:
-            # Eliminar a los estudiantes del profesor de la colección tDash_students
             for student_id in lst_students:
                 if student_id:
                     student_ref = db.collection("tDash_students").document(student_id)
                     student_ref.delete()
 
-            # Eliminar las referencias a los estudiantes del profesor en tDash_classStudentData
             class_student_data_ref = db.collection("tDash_classStudentData")
             class_student_data_query = class_student_data_ref.where(
                 "idStudent", "in", lst_students
@@ -134,20 +139,17 @@ async def del_acc_teacher(teacherData: SearchTeacherSchema):
                         doc_ref = class_student_data_ref.document(doc.id)
                         doc_ref.delete()
 
-        # Eliminar el usuario del módulo de autenticación de Firebase
-        auth.delete_user(teacherData.teacherID)
+        auth.delete_user(teacher_data.teacherID)
 
-        # Enviar correo electrónico de confirmación
         if teacher_doc.exists and teacher_doc.to_dict().get("email"):
-            sendedEmail = send_email(
+            sent_email = send_email(
                 teacher_doc.to_dict()["email"],
                 "Deleted Account",
                 "deleteAccount.html",
             )
 
-            print("Email", sendedEmail)
+            print("Email", sent_email)
 
-        # Eliminar el documento del profesor de tDash_teacherData
         teacher_doc_ref.delete()
 
         return JSONResponse(
@@ -155,11 +157,59 @@ async def del_acc_teacher(teacherData: SearchTeacherSchema):
             status_code=200,
         )
 
-    except HTTPException as e:
-        raise e
+    except HTTPException as error:
+        raise error
 
-    except Exception as e:
-        # Manejar otros errores inesperados
+    except Exception as error:
         raise HTTPException(
-            status_code=500, detail=f"Error al eliminar la cuenta de profesor: {str(e)}"
+            status_code=500, detail=f"Error al eliminar la cuenta de profesor: {str(error)}"
+        ) from error
+
+
+@router.post("/studentsAmount")
+async def get_students_amount(student_amount_req: StudentsAmountSchema):
+    """
+    Get the amount of students for a teacher.
+    """
+    try:
+        teacher_ref = db.collection("tDash_teacherData").document(
+            student_amount_req.teacherID
         )
+        teacher_doc = teacher_ref.get()
+
+        if teacher_doc.exists:
+            teacher_data = teacher_doc.to_dict()
+            lst_students = teacher_data.get("lstStudents", [])
+            students_amount = len(lst_students)
+
+            plan_id = student_amount_req.planID
+            plan_doc = db.collection("tDash_plans").document(plan_id).get()
+
+            if plan_doc.exists:
+                plan_data = plan_doc.to_dict()
+                max_students = plan_data.get("maxStudents")
+                limit_students = students_amount == max_students
+
+                return JSONResponse(
+                    content={
+                        "students_amount": students_amount,
+                        "max_students": max_students,
+                        "limit_students": limit_students,
+                    },
+                    status_code=200,
+                )
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Plan with ID {plan_id} not found",
+                )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Teacher with ID {student_amount_req.teacherId} not found",
+            )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Error getting students amount: {str(error)}"
+        ) from error

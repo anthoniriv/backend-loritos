@@ -10,10 +10,7 @@ router = APIRouter()
 @router.post("/listContent")
 async def get_type_content(contentID: GetContent):
     try:
-        if contentID.contentTypeId == "UM":
-            content_type_id = 1
-        else:
-            content_type_id = 2
+        content_type_id = 1 if contentID.contentTypeId == "UM" else 2
 
         collection_ref = db.collection("tDash_content")
         docs = collection_ref.where("typeContent", "==", content_type_id).stream()

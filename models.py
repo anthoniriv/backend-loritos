@@ -21,6 +21,10 @@ class ForgotPassword(BaseModel):
 class SearchTeacherSchema(BaseModel):
     teacherID: str
 
+class StudentsAmountSchema(BaseModel):
+    teacherID: str
+    planID: str
+
 class GetContent(BaseModel):
     contentTypeId: str
 
@@ -101,3 +105,7 @@ class IdClass(BaseModel):
 class EditClassRequest(BaseModel):
     idClass: str
     className: str
+
+class SubscribeTeacher(BaseModel):
+    teacherID: str
+    planID: str
