@@ -64,6 +64,11 @@ async def get_teacher_data(teacher_data: SearchTeacherSchema):
                     subscription_data["renewDate"] = renew_date.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
+                due_date = subscription_data.get("fechaVencimiento")
+                if isinstance(due_date, datetime):
+                    subscription_data["fechaVencimiento"] = due_date.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
 
                 plan_id = subscription_data.get("id_plan")
                 plan_doc = db.collection("tDash_plans").document(plan_id).get()

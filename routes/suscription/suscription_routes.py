@@ -218,21 +218,24 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
             "subscriptionId" in subscription_data
         ):  # Verifica si hay datos en subscription_data
             print("asdasdas2", subscription_data["subscriptionId"])
-            stripe.Subscription.cancel(subscription_data["subscriptionId"])
-            teacher_data_ref.collection("tDash_subscriptionData").document(
-                idDoc
-            ).delete()
+            if subscription_data.get("free_plan"):
+                teacher_data_ref.update({"hasSuscription": False})
+            else:
+                stripe.Subscription.cancel(subscription_data["subscriptionId"])
+                teacher_data_ref.collection("tDash_subscriptionData").document(
+                    idDoc
+                ).delete()
 
-            sendedEmail = send_email(
-                teacher_data["email"],
-                "Suscription Cancelled",
-                "canceledSuscription.html",
-            )
+                sendedEmail = send_email(
+                    teacher_data["email"],
+                    "Suscription Cancelled",
+                    "canceledSuscription.html",
+                )
 
-            print(sendedEmail)
+                print(sendedEmail)
 
-            # Actualizar el valor de 'hasSuscription' a False después de cancelar la suscripción
-            teacher_data_ref.update({"hasSuscription": False})
+                # Actualizar el valor de 'hasSuscription' a False después de cancelar la suscripción
+                teacher_data_ref.update({"hasSuscription": False})
         else:
             teacher_data_ref.collection("tDash_subscriptionData").document(
                 idDoc
