@@ -215,16 +215,15 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
         print("asdasdas", subscription_data)
 
         if (
-            "subscriptionId" in subscription_data
+            "id_plan" in subscription_data
         ):  # Verifica si hay datos en subscription_data
-            print("asdasdas2", subscription_data["subscriptionId"])
             if subscription_data.get("free_plan"):
                 teacher_data_ref.update({"hasSuscription": False})
             else:
+                print("asdasdas2", subscription_data["subscriptionId"])
                 stripe.Subscription.cancel(subscription_data["subscriptionId"])
-                teacher_data_ref.collection("tDash_subscriptionData").document(
-                    idDoc
-                ).delete()
+                # Delete the subscription data document
+                # teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
 
                 sendedEmail = send_email(
                     teacher_data["email"],
@@ -237,9 +236,10 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
                 # Actualizar el valor de 'hasSuscription' a False después de cancelar la suscripción
                 teacher_data_ref.update({"hasSuscription": False})
         else:
-            teacher_data_ref.collection("tDash_subscriptionData").document(
-                idDoc
-            ).delete()
+            raise HTTPException(
+                status_code=404,
+                detail="No se encontraron datos de suscripción para el usuario",
+            )
 
         return JSONResponse(
             content={"message": "Suscripción cancelada correctamente"}, status_code=200
