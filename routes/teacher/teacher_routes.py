@@ -50,36 +50,45 @@ async def get_teacher_data(teacher_data: SearchTeacherSchema):
                 if isinstance(value, datetime):
                     teacher_data[key] = value.strftime("%Y-%m-%d %H:%M:%S")
 
-            subscription_data_query = teacher_ref.collection(
-                "tDash_subscriptionData"
-            ).limit(1)
-            subscription_data_docs = subscription_data_query.get()
+            subscription_data = {}
+            if teacher_data.get("hasSuscription", True):
+                subscription_data_query = teacher_ref.collection(
+                    "tDash_subscriptionData"
+                ).limit(1)
+                subscription_data_docs = subscription_data_query.get()
 
-            subscription_data = None
-            if subscription_data_docs:
-                subscription_data = subscription_data_docs[0].to_dict()
+                if subscription_data_docs:
+                    subscription_data = subscription_data_docs[0].to_dict()
 
-                renew_date = subscription_data.get("renewDate")
-                if isinstance(renew_date, datetime):
-                    subscription_data["renewDate"] = renew_date.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                due_date = subscription_data.get("fechaVencimiento")
-                if isinstance(due_date, datetime):
-                    subscription_data["fechaVencimiento"] = due_date.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    renew_date = subscription_data.get("renewDate")
+                    if isinstance(renew_date, datetime):
+                        subscription_data["renewDate"] = renew_date.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                    due_date = subscription_data.get("fechaVencimiento")
+                    if isinstance(due_date, datetime):
+                        subscription_data["fechaVencimiento"] = due_date.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
 
-                plan_id = subscription_data.get("id_plan")
-                plan_doc = db.collection("tDash_plans").document(plan_id).get()
-                if plan_doc.exists:
-                    plan_data = plan_doc.to_dict()
-                    max_students = plan_data.get("maxStudents")
-                    lst_students = teacher_data.get("lstStudents", [])
-                    if max_students == len(lst_students):
-                        teacher_data["limitStudents"] = True
-                    else:
-                        teacher_data["limitStudents"] = False
+                    plan_id = subscription_data.get("id_plan")
+                    plan_doc = db.collection("tDash_plans").document(plan_id).get()
+                    if plan_doc.exists:
+                        plan_data = plan_doc.to_dict()
+                        max_students = plan_data.get("maxStudents")
+                        lst_students = teacher_data.get("lstStudents", [])
+                        if max_students == len(lst_students):
+                            teacher_data["limitStudents"] = True
+                        else:
+                            teacher_data["limitStudents"] = False
+
+            return JSONResponse(
+                content={
+                    "teacher_data": teacher_data,
+                    "subscription_data": subscription_data,
+                },
+                status_code=200,
+            )
 
             return JSONResponse(
                 content={
