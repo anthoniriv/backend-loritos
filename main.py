@@ -13,6 +13,7 @@ from routes.classes.classes_routes import router as classes_router
 from routes.student.student_routes import router as student_router
 from routes.content.content_routes import router as content_router
 from routes.contact.contact_routes import router as contact_router
+from routes.admin.admin_routes import router as admin_router
 
 
 
@@ -28,6 +29,7 @@ app.include_router(classes_router, prefix="/dashboard/classes", tags=["Classes"]
 app.include_router(student_router, prefix="/dashboard/students", tags=["Students"])
 app.include_router(content_router, prefix="/dashboard/content", tags=["Content"])
 app.include_router(contact_router, prefix="/dashboard/contact", tags=["Contact"])
+app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,4 +54,4 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=5001, reload=True)

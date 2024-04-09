@@ -53,6 +53,7 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
             "paid_sub": sessionCheckoutCreate.paid_sub,
             "status": sessionCheckoutCreate.status,
             "stripe_session_id": session_id,
+            "date_create": datetime.now(),
         }
 
         subscription_ref = (
@@ -390,7 +391,8 @@ async def free_subscribe_teacher(subscribe_teacher: SubscribeTeacher):
             "id_plan": subscribe_teacher.planID,
             "status": "complete",
             "fechaVencimiento": expiration_date,
-            "free_plan": True
+            "free_plan": True,
+            "date_create": datetime.now(),
         }
 
         # Create a new document in tDash_subscriptionData subcollection
