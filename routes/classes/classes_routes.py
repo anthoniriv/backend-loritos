@@ -476,9 +476,9 @@ async def edit_class(editClassRequest: EditClassRequest):
     try:
         id_class = editClassRequest.idClass
 
-        new_class_name = editClassRequest.newClassName
+        new_class_name = editClassRequest.className
 
-        class_ref = db.collection("tDash_classes").document(id_class)
+        class_ref = db.collection("tDash_class").document(id_class)
         class_doc = class_ref.get()
 
         if class_doc.exists:
