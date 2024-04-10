@@ -54,7 +54,7 @@ async def get_teacher_data(teacher_data: SearchTeacherSchema):
             if teacher_data.get("hasSuscription", True):
                 subscription_data_query = teacher_ref.collection(
                     "tDash_subscriptionData"
-                ).limit(1)
+                ).order_by("date_create", direction="DESCENDING").limit(1)
                 subscription_data_docs = subscription_data_query.get()
 
                 if subscription_data_docs:
