@@ -71,6 +71,11 @@ async def get_teacher_data(teacher_data: SearchTeacherSchema):
                             "%Y-%m-%d %H:%M:%S"
                         )
 
+                    create_date = subscription_data.get("date_create")
+                    if isinstance(create_date, datetime):
+                        subscription_data["date_create"] = create_date.strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     plan_id = subscription_data.get("id_plan")
                     plan_doc = db.collection("tDash_plans").document(plan_id).get()
                     if plan_doc.exists:
