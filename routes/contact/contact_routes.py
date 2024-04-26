@@ -11,13 +11,13 @@ router = APIRouter()
 @router.post("/sendMessage")
 async def send_contact_message(contact_data: ContactMessage):
     try:
-        email = "usuarionumeroseis@gmail.com"
+        email = contact_data.email_teacher
 
         sendedEmail = send_email(
             email,
             "Solicitud de Contacto",
-            "lostPassword.html",
-            contact_data.email_content,
+            "contactEmail.html",
+            content=contact_data.email_content,
         )
         print(sendedEmail)
         return JSONResponse(

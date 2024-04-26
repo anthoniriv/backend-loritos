@@ -52,9 +52,11 @@ async def get_teacher_data(teacher_data: SearchTeacherSchema):
 
             subscription_data = {}
             if teacher_data.get("hasSuscription", True):
-                subscription_data_query = teacher_ref.collection(
-                    "tDash_subscriptionData"
-                ).order_by("date_create", direction="DESCENDING").limit(1)
+                subscription_data_query = (
+                    teacher_ref.collection("tDash_subscriptionData")
+                    .order_by("date_create", direction="DESCENDING")
+                    .limit(1)
+                )
                 subscription_data_docs = subscription_data_query.get()
 
                 if subscription_data_docs:
@@ -181,7 +183,8 @@ async def del_acc_teacher(teacher_data: SearchTeacherSchema):
 
     except Exception as error:
         raise HTTPException(
-            status_code=500, detail=f"Error al eliminar la cuenta de profesor: {str(error)}"
+            status_code=500,
+            detail=f"Error al eliminar la cuenta de profesor: {str(error)}",
         ) from error
 
 
@@ -231,4 +234,58 @@ async def get_students_amount(student_amount_req: StudentsAmountSchema):
     except Exception as error:
         raise HTTPException(
             status_code=500, detail=f"Error getting students amount: {str(error)}"
+        ) from error
+
+
+@router.post("/validateSub")
+async def validate_subscription(teacher_data: SearchTeacherSchema):
+    """
+    Validate teacher subscription.
+    """
+    try:
+        teacher_ref = db.collection("tDash_teacherData").document(
+            teacher_data.teacherID
+        )
+        teacher_doc = teacher_ref.get()
+
+        if teacher_doc.exists:
+            teacher_data = teacher_doc.to_dict()
+
+            if teacher_data.get("hasSuscription", True):
+                subscription_data_query = (
+                    teacher_ref.collection("tDash_subscriptionData")
+                    .order_by("date_create", direction="DESCENDING")
+                    .limit(1)
+                )
+                subscription_data_docs = subscription_data_query.get()
+
+                if subscription_data_docs:
+                    subscription_data = subscription_data_docs[0].to_dict()
+                    due_date = subscription_data.get("fechaVencimiento")
+                    if isinstance(due_date, datetime):
+                        due_date = due_date.strftime("%Y-%m-%d %H:%M:%S")
+                    return JSONResponse(
+                        content={"has_sub": True},
+                        status_code=200,
+                    )
+                else:
+                    return JSONResponse(
+                        content={"has_sub": False},
+                        status_code=200,
+                    )
+            else:
+                return JSONResponse(
+                    content={"has_sub": True},
+                    status_code=200,
+                )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Teacher with ID {teacher_data.teacherID} not found",
+            )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error validating teacher subscription: {str(error)}",
         ) from error

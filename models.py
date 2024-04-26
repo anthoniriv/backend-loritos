@@ -54,6 +54,7 @@ class GetStudentDataRequest(BaseModel):
 
 class ContactMessage(BaseModel):
     email_content: str
+    email_teacher: str
 
 class SessionCheckoutCreate(BaseModel):
     idTeacher: str

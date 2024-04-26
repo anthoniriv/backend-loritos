@@ -6,6 +6,8 @@ from config import db, firestore
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.exceptions import HTTPException
+import boto3
+from io import BytesIO
 
 from models import (
     ClassId,
@@ -393,41 +395,54 @@ from utils import render_html_template
 
 
 @router.post("/getCredentials")
-async def add_unitsClasses(idClass: IdClass):
+async def get_credentials(idClass: IdClass):
     try:
         # Obtener los datos de la clase
         class_doc = db.collection("tDash_class").document(idClass.idClass).get()
         if class_doc.exists:
             class_data = class_doc.to_dict()
 
-            # Renderizar la plantilla HTML con los datos de la clase
-            template_str = """
-            <html>
-            <head><title>Credentials</title></head>
-            <body>
-            <h1>Credentials for Class {{ class_name }}</h1>
-            <p>User: {{ user }}</p>
-            <p>Password: {{ password }}</p>
-            </body>
-            </html>
-            """
-            template = Template(template_str)
-            html_content = template.render(
-                class_name=class_data["className"],
-                user=class_data["user"],
-                password=class_data["password"],
-            )
+            # Verificar si el archivo PDF ya existe
+            s3 = boto3.client("s3")
+            bucket_name = "cred-loriworld-test"
+            pdf_file_name = f"class_credentials_{idClass.idClass}.pdf"
+            response = s3.list_objects_v2(Bucket=bucket_name, Prefix=pdf_file_name)
 
-            # Generar el PDF
-            pdf = pdfkit.from_string(html_content, False)
+            if "Contents" in response:
+                # El archivo PDF ya existe, obtener la URL pública del PDF en S3
+                s3_url = f"https://{bucket_name}.s3.amazonaws.com/{pdf_file_name}"
+                return {"pdf_url": s3_url}
+            else:
+                # El archivo PDF no existe, generar y guardar el PDF en S3 de Amazon
+                # Renderizar la plantilla HTML con los datos de la clase
+                template_str = """
+                <html>
+                <head><title>Credentials</title></head>
+                <body>
+                <h1>Credentials for Class {{ class_name }}</h1>
+                <p>User: {{ user }}</p>
+                <p>Password: {{ password }}</p>
+                </body>
+                </html>
+                """
+                template = Template(template_str)
+                html_content = template.render(
+                    class_name=class_data["className"],
+                    user=class_data["user"],
+                    password=class_data["password"],
+                )
 
-            # Guardar el PDF temporalmente
-            pdf_file = "/tmp/class_credentials.pdf"
-            with open(pdf_file, "wb") as f:
-                f.write(pdf)
+                # Generar el PDF
+                pdf = pdfkit.from_string(html_content, False)
 
-            # Retornar el PDF como descarga
-            return FileResponse(pdf_file, filename="class_credentials.pdf")
+                # Guardar el PDF en S3 de Amazon
+                s3.upload_fileobj(BytesIO(pdf), bucket_name, pdf_file_name)
+
+                # Obtener la URL pública del PDF en S3
+                s3_url = f"https://{bucket_name}.s3.amazonaws.com/{pdf_file_name}"
+
+                # Retornar la URL pública del PDF
+                return {"pdf_url": s3_url}
 
         else:
             raise HTTPException(

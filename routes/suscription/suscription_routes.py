@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import Optional
-from config import db, stripe
+from config import db, stripe, firestore
 
 import stripe
 from datetime import datetime, timedelta
@@ -23,9 +23,9 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
 
     try:
         session = stripe.checkout.Session.create(
-            success_url="http://localhost:4200/subscription/success?id_plan="
+            success_url="http://d20r56hq8b94bf.cloudfront.net/subscription/success?id_plan="
             + sessionCheckoutCreate.idPlan,
-            cancel_url="http://localhost:4200/subscription/canceled",
+            cancel_url="http://d20r56hq8b94bf.cloudfront.net/subscription/canceled",
             line_items=[
                 {
                     "price": sessionCheckoutCreate.stripePriceId,
@@ -127,6 +127,15 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 "subscriptionData": subscription_data,
             }
 
+            response_data_srv = {
+                "success": "true",
+                "suscriptionId": session["subscription"],
+                "urlInvoice": urlInvoice,
+                "activeSus": activeSus,
+                "status": session.status,
+                "subscriptionData": subscription_data,
+            }
+
             subscription_data_ref = teacher_data_ref.collection(
                 "tDash_subscriptionData"
             ).document(docID)
@@ -154,7 +163,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
 
             print(sendedEmail)
 
-            return JSONResponse(content=response_data, status_code=200)
+            return JSONResponse(content=response_data_srv, status_code=200)
         else:
             teacher_data_ref = db.collection("tDash_teacherData").document(
                 sessionStripeCheck.userId
@@ -196,7 +205,7 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
 
         subscription_data_query = teacher_data_ref.collection(
             "tDash_subscriptionData"
-        ).limit(1)
+        ).order_by("date_create", direction=firestore.Query.DESCENDING).limit(1)
 
         subscription_data_docs = subscription_data_query.get()
 
