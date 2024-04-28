@@ -4,7 +4,6 @@ from fastapi import FastAPI, Depends
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
-
 from routes.auth.auth_routes import router as auth_router
 from routes.suscription.suscription_routes import router as suscription_router
 from routes.common.common_routes import router as common_router
@@ -15,10 +14,8 @@ from routes.content.content_routes import router as content_router
 from routes.contact.contact_routes import router as contact_router
 from routes.admin.admin_routes import router as admin_router
 
-
-
 app = FastAPI(
-    description="This is a loritos backend", title="LoritosBackend", docs_url="/"
+    description="This is a loritos backend", title="LoritosBackend", docs_url="/doc"
 )
 
 app.include_router(auth_router, prefix="/dashboard/auth", tags=["Auth"])
@@ -51,6 +48,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except auth.InvalidIdTokenError:
         raise HTTPException(status_code=401, detail="Token de autenticación inválido")
 
+@app.get("/")
+async def healthcheck():
+    return {"status": "OK"}
 
 
 if __name__ == "__main__":

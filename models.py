@@ -32,6 +32,11 @@ class AddStudentRequest(BaseModel):
     names: List[str]
     teacherId: str
 
+class AddStudentClassRequest(BaseModel):
+    names: List[str]
+    classId: str
+    teacherId: str
+
 class EditStudentRequest(BaseModel):
     id: str
     name: Optional[str] = None

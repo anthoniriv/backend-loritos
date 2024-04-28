@@ -10,6 +10,7 @@ import boto3
 from io import BytesIO
 
 from models import (
+    AddStudentClassRequest,
     ClassId,
     ClassesAdd,
     EditClassRequest,
@@ -199,48 +200,55 @@ async def delete_class(class_delete: ClassId):
         )
 
 
+def add_students_to_class(class_id: str, student_ids: list):
+    current_time = datetime.now()
+    class_ref = db.collection("tDash_class").document(class_id)
+
+    if class_ref.get().exists:
+        class_ref.update({"lstStudents": firestore.ArrayUnion(student_ids)})
+
+        # Obtener el nombre de la clase
+        class_data = class_ref.get().to_dict()
+        class_name = class_data.get("className")
+
+        # Actualizar className para cada estudiante
+        for student_id in student_ids:
+            student_ref = db.collection("tDash_students").document(student_id)
+            student_ref.update({"className": class_name})
+
+            # Crear un documento en tDash_classStudentData
+            student_class_data = {
+                "idClass": class_id,
+                "idStudent": student_id,
+                "currentUnit": None,
+                "currentContent": None,
+                "currentCoins": 0,
+                "totalCoinsWin": 0,
+                "lastConnection": current_time,
+                "lstProgress": None,
+            }
+            db.collection("tDash_classStudentData").add(student_class_data)
+
+        return True, "Estudiantes añadidos correctamente"
+    else:
+        return False, f"No se encontró la clase con ID {class_id}"
+
+
 @router.post("/addStudents")
-async def add_students(student_add: StudentClassAdd):
+async def add_students_route(student_add: StudentClassAdd):
     try:
-        current_time = datetime.now()
-
-        class_ref = db.collection("tDash_class").document(student_add.class_id)
-
-        if class_ref.get().exists:
-            class_ref.update(
-                {"lstStudents": firestore.ArrayUnion(student_add.student_ids)}
-            )
-
-            # Obtener el nombre de la clase
-            class_data = class_ref.get().to_dict()
-            class_name = class_data.get("className")
-
-            # Actualizar className para cada estudiante
-            for student_id in student_add.student_ids:
-                student_ref = db.collection("tDash_students").document(student_id)
-                student_ref.update({"className": class_name})
-
-                # Crear un documento en tDash_classStudentData
-                student_class_data = {
-                    "idClass": student_add.class_id,
-                    "idStudent": student_id,
-                    "currentUnit": None,
-                    "currentContent": None,
-                    "currentCoins": 0,
-                    "totalCoinsWin": 0,
-                    "lastConnection": current_time,
-                    "lstProgress": None,
-                }
-                db.collection("tDash_classStudentData").add(student_class_data)
-
+        success, message = add_students_to_class(
+            student_add.class_id, student_add.student_ids
+        )
+        if success:
             return JSONResponse(
-                content={"message": "Estudiantes añadidos correctamente"},
+                content={"message": message},
                 status_code=200,
             )
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"No se encontró la clase con ID {student_add.class_id}",
+                detail=message,
             )
 
     except Exception as e:
@@ -248,6 +256,64 @@ async def add_students(student_add: StudentClassAdd):
             status_code=500, detail=f"Error al añadir estudiantes a la clase: {str(e)}"
         )
 
+@router.post("/addNewStudentClass")
+async def add_new_student(student_data: AddStudentClassRequest):
+    try:
+        if not student_data.names:
+            raise HTTPException(
+                status_code=400,
+                detail="Se requiere al menos un nombre en los datos del estudiante",
+            )
+
+        idStudents = []
+
+        for name in student_data.names:
+            current_time = datetime.utcnow()
+
+            new_student_data = {
+                "id": "0",
+                "name": name,
+                "avatarCode": 1,
+                "className": None,
+                "dateAdded": current_time,
+                "lastConnection": current_time,
+                "lastModifiedDate": current_time,
+                "idTeacher": student_data.teacherId,
+            }
+
+            new_student_ref = db.collection("tDash_students").add(new_student_data)
+            new_student_id = new_student_ref[1].id
+
+            idStudents.append(new_student_id)
+
+            new_student_data["id"] = new_student_id
+            db.collection("tDash_students").document(new_student_id).set(
+                new_student_data
+            )
+
+            teacher_data_ref = db.collection("tDash_teacherData").document(
+                student_data.teacherId
+            )
+            teacher_data_ref.update(
+                {"lstStudents": firestore.ArrayUnion([new_student_id])}
+            )
+
+        # Agregar los nuevos estudiantes a la clase
+        success, message = add_students_to_class(student_data.classId, idStudents)
+        if success:
+            return JSONResponse(
+                content={"message": message}, status_code=201
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=message,
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error al agregar estudiantes: {str(e)}"
+        )
 
 @router.post("/addUnits")
 async def add_unitsClasses(units_add: UnitsClassAdd):
@@ -332,7 +398,11 @@ async def get_lst_student_classes(idClass: IdClass):
             lst_students = class_doc.to_dict().get("lstStudents", [])
 
             students_data = []
-            students_docs = db.collection("tDash_students").where("__name__", "in", lst_students).stream()
+            students_docs = (
+                db.collection("tDash_students")
+                .where("__name__", "in", lst_students)
+                .stream()
+            )
 
             for student_doc in students_docs:
                 student_data = student_doc.to_dict()
@@ -367,7 +437,11 @@ async def get_lst_unit_classes(idClass: IdClass):
             lst_units = class_doc.to_dict().get("lstUnits", [])
 
             units_data = []
-            units_docs = db.collection("tDash_content").where("__name__", "in", lst_units).stream()
+            units_docs = (
+                db.collection("tDash_content")
+                .where("__name__", "in", lst_units)
+                .stream()
+            )
 
             for unit_doc in units_docs:
                 unit_data = unit_doc.to_dict()
@@ -389,9 +463,6 @@ async def get_lst_unit_classes(idClass: IdClass):
             status_code=500,
             detail=f"Error al obtener los datos de las unidades: {str(e)}",
         )
-
-
-from utils import render_html_template
 
 
 @router.post("/getCredentials")

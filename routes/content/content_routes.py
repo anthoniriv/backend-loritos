@@ -27,7 +27,7 @@ async def get_type_content(contentID: GetContent):
                 "content": {"listDocuments": [], "listContent": []},
             }
 
-            content_units_ref = doc.reference.collection("tDash_ContentUnits")
+            content_units_ref = doc.reference.collection("tDash_ContentUnits").order_by("order", direction="ASCENDING")
             content_units_docs = content_units_ref.stream()
 
             for unit_doc in content_units_docs:
