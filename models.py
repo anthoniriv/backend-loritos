@@ -18,8 +18,12 @@ class ChangePasswordRequest(BaseModel):
 
 class ForgotPassword(BaseModel):
     email: str
+
 class SearchTeacherSchema(BaseModel):
     teacherID: str
+
+class SearchAdminSchema(BaseModel):
+    adminID: str
 
 class StudentsAmountSchema(BaseModel):
     teacherID: str
