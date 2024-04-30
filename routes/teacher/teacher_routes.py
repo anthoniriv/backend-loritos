@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from models import (
+    EditTeacherRequest,
     SearchTeacherSchema,
     ChangePasswordRequest,
     StudentsAmountSchema,
@@ -288,4 +289,26 @@ async def validate_subscription(teacher_data: SearchTeacherSchema):
         raise HTTPException(
             status_code=500,
             detail=f"Error validating teacher subscription: {str(error)}",
+        ) from error
+
+@router.post("/edit_teacher")
+async def edit_teacher(teacher_editReq: EditTeacherRequest):
+    #Quiero que se edite el nombre del profesor que l envie del request
+    try:
+        teacher_ref = db.collection("tDash_teacherData").document(teacher_editReq.teacherID)
+        teacher_doc = teacher_ref.get()
+        if teacher_doc.exists:
+            teacher_ref.update({"name": teacher_editReq.name, "lastname": teacher_editReq.lastname})
+            return JSONResponse(
+                content={"message": "Profesor editado correctamente"},
+                status_code=200,
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Profesor con ID {teacher_editReq.teacherID} no encontrado",
+            )
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Error al editar profesor: {str(error)}"
         ) from error

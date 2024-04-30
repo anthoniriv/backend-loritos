@@ -119,3 +119,8 @@ class EditClassRequest(BaseModel):
 class SubscribeTeacher(BaseModel):
     teacherID: str
     planID: str
+
+class EditTeacherRequest(BaseModel):
+    teacherID: str
+    teacherName: str
+    teacherLastName: str
