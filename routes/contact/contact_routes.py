@@ -19,7 +19,6 @@ async def send_contact_message(contact_data: ContactMessage):
             "contactEmail.html",
             content=contact_data.email_content,
         )
-        print(sendedEmail)
         return JSONResponse(
             content={"message": "Correo enviado correctamente"}, status_code=200
         )

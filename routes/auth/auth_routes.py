@@ -30,7 +30,6 @@ async def create_account(user_data: SingUpSchema):
         if verificacion == True:
             print("Email verificado")
         else:
-            print("Se requiere verificacion")
             send_email_verification(user.email)
             print("Se ha enviado un correo de verificacion")
         # Crear documento en la colección tDash_teacherData
@@ -50,7 +49,6 @@ async def create_account(user_data: SingUpSchema):
             "registeredAccount.html",
         )
 
-        print(sendedEmail)
 
         # Agregar el documento a la colección
         db.collection("tDash_teacherData").document(user.uid).set(teacher_data)
@@ -80,8 +78,6 @@ async def create_acces_token(user_data: LoginSchema):
         user = firebase.auth().sign_in_with_email_and_password(
             email=email, password=password
         )
-        print("USUARIOO", user)
-
         token = user["idToken"]
 
         return JSONResponse(content={"token": token}, status_code=200)
@@ -95,18 +91,14 @@ async def create_acces_token(user_data: LoginSchema):
 
 @router.post("/ping")
 async def validate_token(request: Request):
-    print("USUARIO", request)
     headers = request.headers
     jwt = headers.get("authorization")
 
     user = auth.verify_id_token(jwt)
-    print("USUARIO", user)
     verificacion = is_email_verified(user["user_id"])
-    print("USUARIO", verificacion)
     if verificacion == True:
         print("Email verificado")
     else:
-        print("Se requiere verificacion", user["email"])
         send_email_verification(user["email"])
         print("Se ha enviado un correo de verificacion")
 

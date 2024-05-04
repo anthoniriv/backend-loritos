@@ -84,13 +84,10 @@ async def get_classes(teacherID: str):
 
         teacher_data = teacher_doc.to_dict()
         lst_classes_ids = teacher_data.get("lstClasses", [])
-        print("Clases", lst_classes_ids)
         classes_ref = db.collection("tDash_class").where("id", "in", lst_classes_ids)
         classes_docs = classes_ref.stream()
 
         classes_data = []
-        print("classes_data", classes_data)
-
         for doc in classes_docs:
             class_data = doc.to_dict()
             if "createdDate" in class_data:
@@ -129,7 +126,6 @@ async def get_class(class_get: ClassId):
                     "lastModifiedDate"
                 ].strftime("%Y-%m-%d %H:%M:%S")
             class_data["id"] = doc.id
-            print("CLASS_dATA", class_data)
             listaUnits = []
             if class_data.get("lstUnits") is not None:  # Validar que no sea nulo
                 for unit_id in class_data["lstUnits"]:
@@ -137,7 +133,6 @@ async def get_class(class_get: ClassId):
                     unit_doc = unit_ref.get()
                     if unit_doc.exists:
                         listaUnits.append(unit_doc.to_dict())
-            print("listaUnits", listaUnits)
             listaStudents = []
             if class_data.get("lstStudents") is not None:  # Validar que no sea nulo
                 for student_id in class_data["lstStudents"]:
@@ -158,7 +153,6 @@ async def get_class(class_get: ClassId):
                                 "lastConnection"
                             ].strftime("%Y-%m-%d %H:%M:%S")
                         listaStudents.append(student_data)
-            print("listaStudents", listaStudents)
             class_data["listaUnits"] = listaUnits
             class_data["listaStudents"] = listaStudents
 

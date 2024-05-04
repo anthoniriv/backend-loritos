@@ -36,8 +36,6 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
         )
 
         session_id = session.id
-        print("session_id:", session_id)
-
         teacher_ref = db.collection("tDash_teacherData").document(
             sessionCheckoutCreate.idTeacher
         )
@@ -106,7 +104,6 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             subscription_data_docs = subscription_data_query.stream()
 
             for doc in subscription_data_docs:
-                print("DOCCCID", doc.id)
                 docID = doc.id
                 subscription_data = doc.to_dict()
                 break
@@ -160,8 +157,6 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 activeSus=activeSus,
                 urlInvoice=urlInvoice,
             )
-
-            print(sendedEmail)
 
             return JSONResponse(content=response_data_srv, status_code=200)
         else:
@@ -222,15 +217,12 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
         else:
             subscription_data = {}
 
-        print("asdasdas", subscription_data)
-
         if (
             "id_plan" in subscription_data
         ):  # Verifica si hay datos en subscription_data
             if subscription_data.get("free_plan"):
                 teacher_data_ref.update({"hasSuscription": False})
             else:
-                print("asdasdas2", subscription_data["subscriptionId"])
                 stripe.Subscription.cancel(subscription_data["subscriptionId"])
                 # Delete the subscription data document
                 # teacher_data_ref.collection("tDash_subscriptionData").document(idDoc).delete()
@@ -240,8 +232,6 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
                     "Suscription Cancelled",
                     "canceledSuscription.html",
                 )
-
-                print(sendedEmail)
 
                 # Actualizar el valor de 'hasSuscription' a False después de cancelar la suscripción
                 teacher_data_ref.update({"hasSuscription": False})
@@ -279,15 +269,10 @@ async def payment_webhook(webhook: Optional[dict] = None):
             else:
                 return JSONResponse(content={"message": "Evento no relacionado con pago fallido, no se requiere acción"}, status_code=200)
         elif webhook["type"] == "customer.subscription.deleted":
-            print("Suscripción cancelada correctamente", webhook)
             if webhook["data"]["object"]["cancellation_details"]["reason"] == "payment_failed":
                 user = stripe.Customer.retrieve(webhook["data"]["object"]["customer"])
-                print("Email subscripcion", user["email"])
-                print("Cancelado por error de metodo de pago")
                 teacher_docs = db.collection("tDash_teacherData").where("email", "==", user["email"]).limit(1).stream()
-                print("Usuario obtenido de bd", teacher_docs)
                 for doc in teacher_docs:
-                    print("documento", teacher_docs)
                     doc.reference.update({"hasSuscription": False})
                 if teacher_docs:
                     teacher_ref = doc.reference

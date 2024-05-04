@@ -170,8 +170,6 @@ async def del_acc_teacher(teacher_data: SearchTeacherSchema):
                 "deleteAccount.html",
             )
 
-            print("Email", sent_email)
-
         teacher_doc_ref.delete()
 
         return JSONResponse(

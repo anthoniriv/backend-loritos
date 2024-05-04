@@ -59,7 +59,6 @@ def send_email_verification(email):
             "emailVerification.html",
             link=link,
         )
-        print(sendedEmail)
         return True
 
     except auth.AuthError as e:

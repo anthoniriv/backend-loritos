@@ -21,7 +21,6 @@ async def get_list_teachers():
 
     for teacher_doc in teacher_docs:
         teacher_data = teacher_doc.to_dict()
-        print('teacher_data', teacher_data)
         teacher_id = teacher_doc.id
         teacher_name = teacher_data.get("name")
         teacher_lastname = teacher_data.get("lastname")
@@ -30,19 +29,15 @@ async def get_list_teachers():
         subscription_subcollection = db.collection("tDash_teacherData").document(teacher_id).collection("tDash_subscriptionData")
         subscription_docs = subscription_subcollection.stream()
         len_subs_docs= len(list(subscription_docs))
-        print('len_subs_docs', len_subs_docs)
         if len_subs_docs > 0:
             # Get last subscription document from tdash_subscriptiondata subcollection
             last_subscription_doc = subscription_subcollection.order_by("date_create", direction=firestore.Query.DESCENDING).limit(1).get()
-            print('last_subscription_doc', last_subscription_doc)
             last_subscription_data = last_subscription_doc[0].to_dict()
-            print('suscriptiondata', last_subscription_data)
             teacher_subscription_id = last_subscription_data.get("id_plan")
 
             # Get subscription name from tdash_plans collection
             plan_doc = db.collection("tDash_plans").document(teacher_subscription_id).get()
             plan_data = plan_doc.to_dict()
-            print('plan_data', plan_data)
             plan_name = plan_data.get("plan_name")
         else:
             plan_name = None
@@ -80,7 +75,6 @@ async def create_account(user_data: SingUpSchema):
         if verificacion == True:
             print("Email verificado")
         else:
-            print("Se requiere verificacion")
             send_email_verification(user.email)
             print("Se ha enviado un correo de verificacion")
         # Crear documento en la colección tDash_teacherData
@@ -98,7 +92,6 @@ async def create_account(user_data: SingUpSchema):
             "registeredAccount.html",
         )
 
-        print(sendedEmail)
 
         # Agregar el documento a la colección
         db.collection("tAdmin_users").document(user.uid).set(teacher_data)
@@ -128,8 +121,6 @@ async def create_acces_token(user_data: LoginSchema):
         user = firebase.auth().sign_in_with_email_and_password(
             email=email, password=password
         )
-        print("USUARIOO", user)
-
         token = user["idToken"]
 
         return JSONResponse(content={"token": token}, status_code=200)
@@ -143,18 +134,14 @@ async def create_acces_token(user_data: LoginSchema):
 
 @router.post("/ping")
 async def validate_token(request: Request):
-    print("USUARIO", request)
     headers = request.headers
     jwt = headers.get("authorization")
 
     user = auth.verify_id_token(jwt)
-    print("USUARIO", user)
     verificacion = is_email_verified(user["user_id"])
-    print("USUARIO", verificacion)
     if verificacion == True:
         print("Email verificado")
     else:
-        print("Se requiere verificacion", user["email"])
         send_email_verification(user["email"])
         print("Se ha enviado un correo de verificacion")
 
@@ -260,7 +247,6 @@ async def del_acc_admin(admin_dataReq: SearchAdminSchema):
                 "deleteAccount.html",
             )
 
-            print("Email", sent_email)
 
         teacher_doc_ref.delete()
 
