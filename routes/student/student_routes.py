@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
@@ -6,7 +6,7 @@ from config import db, firestore
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-
+from utils import get_student_progress
 from models import (
     AddStudentRequest,
     EditStudentRequest,
@@ -14,12 +14,25 @@ from models import (
     GetStudentDataRequest,
 )
 
+from itertools import zip_longest
+from concurrent.futures import ThreadPoolExecutor
+
+from routes.student.models import GetProgressRequest
 
 router = APIRouter()
 
+# Función para procesar un documento de estudiante
+def process_student_doc(student_doc, has_class):
+    student_data = student_doc.to_dict()
+    has_student_class = bool(student_data.get("className", ""))
+    if has_class is None or has_student_class == has_class:
+        return student_data
+    else:
+        return None
 
-from concurrent.futures import ThreadPoolExecutor
-
+# Divide la lista en partes de tamaño n
+def chunks(lst, n):
+    return zip_longest(*[iter(lst)] * n, fillvalue=None)
 
 @router.get("/")
 async def get_all_students(teacherID: str, hasClass: Optional[bool] = None):
@@ -35,28 +48,28 @@ async def get_all_students(teacherID: str, hasClass: Optional[bool] = None):
         teacher_data = teacher_doc.to_dict()
         lst_students_ids = teacher_data.get("lstStudents", [])
 
-        # Obtener todos los estudiantes
-        students_ref = db.collection("tDash_students").where(
-            "id", "in", lst_students_ids
-        )
-        students_docs = students_ref.stream()
+        # Dividir la lista en grupos de máximo 30 IDs
+        lst_students_ids_chunks = list(chunks(lst_students_ids, 30))
 
-        # Función para procesar un documento de estudiante
-        def process_student_doc(student_doc):
-            student_data = student_doc.to_dict()
-            has_class = bool(student_data.get("className", ""))
-            if hasClass is None or has_class == hasClass:
-                return student_data
-            else:
-                return None
+        # Lista para almacenar los estudiantes procesados de todos los grupos
+        list_students = []
 
-        with ThreadPoolExecutor() as executor:
-            processed_students = list(executor.map(process_student_doc, students_docs))
+        # Procesar cada grupo de IDs
+        for ids_chunk in lst_students_ids_chunks:
+            students_ref = db.collection("tDash_students").where(
+                "id", "in", ids_chunk
+            )
+            students_docs = list(students_ref.stream())  # Convertir a lista
 
-        list_students = [
-            student for student in processed_students if student is not None
-        ]
+            # Procesar los estudiantes y agregarlos a la lista
+            with ThreadPoolExecutor() as executor:
+                processed_students = list(executor.map(process_student_doc, students_docs, [hasClass]*len(students_docs)))
 
+            list_students.extend([
+                student for student in processed_students if student is not None
+            ])
+
+        # Formatear fechas si es necesario
         for student in list_students:
             for key, value in student.items():
                 if isinstance(value, datetime):
@@ -68,7 +81,6 @@ async def get_all_students(teacherID: str, hasClass: Optional[bool] = None):
         raise HTTPException(
             status_code=500, detail=f"Error al obtener estudiantes: {str(e)}"
         )
-
 
 @router.post("/add")
 async def add_new_student(student_data: AddStudentRequest):
@@ -181,10 +193,20 @@ async def edit_student(student_data: EditStudentRequest):
             status_code=500, detail=f"Error al actualizar estudiante: {str(e)}"
         )
 
-
+# Ruta para obtener el progreso del estudiante
 @router.post("/getProgress")
-async def get_progress_student():
-    pass
+async def get_progress_student(getProgressRequest: GetProgressRequest):
+    try:
+        student_id = getProgressRequest.studentID
+        class_id = getProgressRequest.classID
+
+        return get_student_progress(student_id, class_id)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener el progreso del estudiante: {str(e)}")
+
 
 
 @router.post("/delete")

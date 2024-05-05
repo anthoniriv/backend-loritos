@@ -1,6 +1,8 @@
 # pylint: disable=import-error
+from http.client import HTTPException
 import os
 import smtplib
+from config import db, firestore
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from jinja2 import Environment, FileSystemLoader
@@ -87,3 +89,92 @@ def render_html_template(template_name, data):
 
     except Exception as e:
         raise RuntimeError(f"Error al renderizar la plantilla HTML: {str(e)}")
+
+content_collection = db.collection("tDash_content")
+student_progress_collection = db.collection("tDash_studentProgress")
+class_student_data_collection = db.collection("tDash_classStudentData")
+
+def get_class_student_data(student_id: str, class_id: str):
+    try:
+        # Consultar el documento en la colección tDash_classStudentData
+        query = class_student_data_collection.where("idStudent", "==", student_id).where("idClass", "==", class_id).limit(1).stream()
+
+        for doc in query:
+            return doc  # Retorna el primer documento que coincida
+
+        raise HTTPException(status_code=404, detail="No se encontró el documento para el estudiante y la clase.")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los datos del estudiante y la clase: {str(e)}")
+
+def get_class_student_data(student_id: str, class_id: str):
+    try:
+        # Consultar el documento en la colección tDash_classStudentData
+        query = class_student_data_collection.where("idStudent", "==", student_id).where("idClass", "==", class_id).limit(1).stream()
+
+        for doc in query:
+            return doc  # Retorna el primer documento que coincida
+
+        raise HTTPException(status_code=404, detail="No se encontró el documento para el estudiante y la clase.")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener los datos del estudiante y la clase: {str(e)}")
+
+def split_unit_and_game(current_unit: str):
+    actualUnit, actualGame = current_unit.split("-")
+    return int(actualUnit[2:]), int(actualGame)
+
+def convert_seconds_to_days_and_months(seconds: int):
+    # Calcular el número de días y meses
+    days = seconds // 86400  # 24 * 60 * 60 (segundos en un día)
+    months = days // 30  # Promedio de 30 días por mes
+
+    return days, months
+
+# Función para obtener el progreso del estudiante
+def get_student_progress(student_id: str, class_id: str):
+    student_progress_doc = student_progress_collection.document(student_id).get()
+    class_student_data_doc = get_class_student_data(student_id, class_id)
+
+    current_coins = class_student_data_doc.get("currentCoins")
+    total_coins_win = class_student_data_doc.get("totalCoinsWin")
+
+    if student_progress_doc.exists:
+        class_subcollection = student_progress_doc.reference.collection(class_id)
+        class_doc_query = class_subcollection.limit(1).stream()
+
+        for class_doc in class_doc_query:
+            current_unit = class_doc.get("idContent")
+            timeSpend = class_doc.get("time")
+            actualUnit, actualGame = split_unit_and_game(current_unit)
+
+            content_docs = content_collection.where("typeContent", "==", 1).stream()
+
+            total_documents = 0
+            total_unidades = 0
+
+            for content_doc in content_docs:
+                units_query = content_doc.reference.collection("tDash_ContentUnits").stream()
+                units_list = list(units_query)
+                total_units = len(units_list)
+                total_documents += total_units
+                total_unidades += 1
+
+            # Convertir tiempo en segundos a meses y años
+            days, months = convert_seconds_to_days_and_months(timeSpend)
+
+            return {
+                "studentID": student_id,
+                "actualGame": actualGame,
+                "gamesTotal": total_documents,
+                "currentCoins": current_coins,
+                "totalCoinsWin": total_coins_win,
+                "timeSpend": timeSpend,
+                "timeSpendInDays": days,
+                "timeSpendInMonths": months,
+                "unitCompleted": actualUnit - 1,
+                "unitQuantity": total_unidades
+            }
+
+    else:
+        raise HTTPException(status_code=404, detail="No se encontró el progreso del estudiante o la subcolección.")
