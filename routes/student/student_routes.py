@@ -6,7 +6,7 @@ from config import db, firestore
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-from utils import get_student_progress
+from utils import get_student_progress_data
 from models import (
     AddStudentRequest,
     EditStudentRequest,
@@ -200,7 +200,7 @@ async def get_progress_student(getProgressRequest: GetProgressRequest):
         student_id = getProgressRequest.studentID
         class_id = getProgressRequest.classID
 
-        return get_student_progress(student_id, class_id)
+        return get_student_progress_data(student_id, class_id)
 
     except HTTPException:
         raise

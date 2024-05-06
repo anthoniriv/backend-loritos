@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.exceptions import HTTPException
 import boto3
 from io import BytesIO
-
+from utils import get_student_progress_data
 from models import (
     AddStudentClassRequest,
     ClassId,
@@ -21,6 +21,8 @@ from models import (
     UnitClassDel,
     UnitsClassAdd,
 )
+
+from routes.classes.models import ProgressClassRequest
 
 router = APIRouter()
 
@@ -208,7 +210,7 @@ def add_students_to_class(class_id: str, student_ids: list):
         # Actualizar className para cada estudiante
         for student_id in student_ids:
             student_ref = db.collection("tDash_students").document(student_id)
-            student_ref.update({"className": class_name})
+            student_ref.update({"className": class_name, "classId": class_id})
 
             # Crear un documento en tDash_classStudentData
             student_class_data = {
@@ -579,3 +581,35 @@ async def edit_class(editClassRequest: EditClassRequest):
             status_code=500,
             detail=f"Error al editar el nombre de la clase: {str(e)}",
         )
+
+class_collection = db.collection("tDash_class")
+
+@router.post("/progressClass")
+async def progress_class(progressClassRequest: ProgressClassRequest):
+    try:
+        class_id = progressClassRequest.classID
+
+        # Obtener la lista de estudiantes (lstStudents) para el classID dado
+        class_doc_ref = class_collection.document(class_id)
+        class_doc = class_doc_ref.get().to_dict()
+
+        if class_doc:
+            lst_students = class_doc.get("lstStudents", [])
+            print("lst_students", lst_students)
+
+            # Lista para almacenar el progreso de cada estudiante
+            progress_list = []
+
+            # Iterar sobre cada estudiante en lst_students y obtener su progreso
+            for student_id in lst_students:
+                student_progress = get_student_progress_data(student_id, class_id)
+                progress_list.append(student_progress)
+
+            return progress_list
+        else:
+            raise HTTPException(status_code=404, detail=f"No se encontró la clase con ID: {class_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener el progreso de la clase: {str(e)}")
