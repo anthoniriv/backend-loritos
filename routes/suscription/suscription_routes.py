@@ -113,17 +113,6 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             # Actualizar los datos del usuario en Firebase
             teacher_data_ref.update({"hasSuscription": True})
 
-            # Crear un nuevo objeto JSON con todas las variables asignadas
-            response_data = {
-                "success": "true",
-                "suscriptionId": session["subscription"],
-                "urlInvoice": urlInvoice,
-                "renewDate": renewDate,
-                "activeSus": activeSus,
-                "status": session.status,
-                "subscriptionData": subscription_data,
-            }
-
             response_data_srv = {
                 "success": "true",
                 "suscriptionId": session["subscription"],
