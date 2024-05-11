@@ -1,4 +1,6 @@
 import base64
+import random
+import string
 from datetime import datetime
 import pdfkit
 from jinja2 import Template
@@ -27,10 +29,18 @@ from routes.classes.models import ProgressClassRequest
 router = APIRouter()
 
 
+
+def validate_class_name(class_name: str):
+    class_docs = db.collection("tDash_class").where("className", "==", class_name).get()
+    if len(class_docs) > 0:
+        raise HTTPException(status_code=400, detail="The class name already exist.")
+
 @router.post("/create")
 async def create_classes(classes_add: ClassesAdd):
     try:
         current_time = datetime.now()
+
+        validate_class_name(classes_add.name_class)
 
         class_data = {
             "idTeacher": classes_add.idTeacher,
@@ -67,11 +77,12 @@ async def create_classes(classes_add: ClassesAdd):
             content={"message": "Clase creada correctamente", "class_id": new_class_id},
             status_code=201,
         )
+    except HTTPException as e:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error al crear la clase: {str(e)}"
         )
-
 
 @router.get("/")
 async def get_classes(teacherID: str):
@@ -460,6 +471,12 @@ async def get_lst_unit_classes(idClass: IdClass):
             detail=f"Error al obtener los datos de las unidades: {str(e)}",
         )
 
+def generate_username():
+    return f"teacher{random.randint(1000, 9999)}"
+
+# Generar una contraseña aleatoria de longitud 8
+def generate_password():
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
 @router.post("/getCredentials")
 async def get_credentials(idClass: IdClass):
@@ -474,7 +491,8 @@ async def get_credentials(idClass: IdClass):
             bucket_name = "cred-loriworld-test"
             pdf_file_name = f"class_credentials_{idClass.idClass}.pdf"
             response = s3.list_objects_v2(Bucket=bucket_name, Prefix=pdf_file_name)
-
+            random_username = generate_username()
+            random_password = generate_password()
             if "Contents" in response:
                 # El archivo PDF ya existe, obtener la URL pública del PDF en S3
                 s3_url = f"https://{bucket_name}.s3.amazonaws.com/{pdf_file_name}"
@@ -483,20 +501,117 @@ async def get_credentials(idClass: IdClass):
                 # El archivo PDF no existe, generar y guardar el PDF en S3 de Amazon
                 # Renderizar la plantilla HTML con los datos de la clase
                 template_str = """
-                <html>
-                <head><title>Credentials</title></head>
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Credentials</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .container {
+                            max-width: 600px;
+                            margin: 20px auto;
+                            background-color: #fff;
+                            border: solid 1px #545fdf;
+                            border-radius: 10px;
+                        }
+                        .top {
+                            background: #545fdf;
+                            padding: 17px 150px;
+                            border-radius: 10px;
+
+                        }
+                        .card {
+                            background: #f3f0ff;
+                            padding: 15px;
+                        }
+                        .divider {
+                            border-left: 2px solid #545fdf;
+                            height: 160px;
+                            margin-left: 10px;
+                            margin-right:10px;
+                        }
+                        h1 {
+                            color: #5b5b5b;
+                            text-align: left;
+                            font-size: 24px;
+                            font-weight: bold;
+                            margin-bottom: 10px;
+                        }
+                        p {
+                            color: #000000;
+                            margin-bottom: 10px;
+                            text-align: left;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+                        .copyright {
+                            text-align: center;
+                            color: #ffffff;
+                            background: #545fdf;
+                            padding: 10px 0;
+                            border-radius: 10px;
+                        }
+                    </style>
+                </head>
                 <body>
-                <h1>Credentials for Class {{ class_name }}</h1>
-                <p>User: {{ user }}</p>
-                <p>Password: {{ password }}</p>
+                    <div class="container">
+                        <div class="top">
+                            <img
+                            align="center"
+                            border="0"
+                            src="https://i.ibb.co/WFqNZyD/logo.png"
+                            alt=""
+                            title=""
+                            style="
+                                margin: auto;
+                                outline: none;
+                                text-decoration: none;
+                                -ms-interpolation-mode: bicubic;
+                                clear: both;
+                                display: inline-block !important;
+                                border: none;
+                                height: auto;
+                                float: none;
+                                max-width: 266px;
+                            "
+                            width="266"
+                            />
+                        </div>
+                        <div class="card">
+                            <table width="100%">
+                                <tr>
+                                    <td>
+                                        <img src="https://i.ibb.co/tHDgxCm/bird.png" alt="Bird" width="100">
+                                    </td>
+                                    <td class="divider"></td>
+                                    <td>
+                                        <div>
+                                            <h1>Class {{ class_name }}</h1>
+                                            <p>User: {{ user }}</p>
+                                            <p>Pass: {{ password }}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="copyright">
+                            <span>Copyright © All rights Reserverd Loritos World 2024</span>
+                        </div>
+                    </div>
                 </body>
                 </html>
                 """
                 template = Template(template_str)
                 html_content = template.render(
                     class_name=class_data["className"],
-                    user=class_data["user"],
-                    password=class_data["password"],
+                    user=random_username,
+                    password=random_password,
                 )
 
                 # Generar el PDF
