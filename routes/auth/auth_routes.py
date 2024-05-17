@@ -12,8 +12,34 @@ from firebase_admin import auth
 
 from utils import is_email_verified, send_email_verification, send_email
 from config import db, firebase
+import asyncio
 
 router = APIRouter()
+
+async def check_subscription_and_notify(id_teacher):
+    await asyncio.sleep(3600)  # Espera de 1 hora
+    teacher_ref = db.collection("tDash_teacherData").document(id_teacher)
+
+    teacher_snapshot = teacher_ref.get()
+    if not teacher_snapshot.exists:
+        print(f"No se encontró el documento del profesor con id {id_teacher}")
+        return
+
+    teacher_data = teacher_snapshot.to_dict()
+    teacher_email = teacher_data.get("email")
+
+    subscription_ref = teacher_ref.collection("tDash_subscriptionData")
+    subscription_docs = list(subscription_ref.stream())
+
+    if not subscription_docs:
+        await send_email(
+            teacher_email,
+            "You’re Almost Done! 🏁",
+            "notifyAccountCreated.html",
+        )
+        print(f"Correo enviado al profesor con id {id_teacher}")
+    else:
+        print(f"El profesor con id {id_teacher} ya tiene una suscripción.")
 
 
 @router.post("/singup")
@@ -43,16 +69,9 @@ async def create_account(user_data: SingUpSchema):
             "lstStudents": [],
         }
 
-        sendedEmail = send_email(
-            email,
-            "Welcome to Loritos World!",
-            "registeredAccount.html",
-        )
-
-
         # Agregar el documento a la colección
         db.collection("tDash_teacherData").document(user.uid).set(teacher_data)
-
+        asyncio.create_task(check_subscription_and_notify(user.uid))
         return JSONResponse(
             content={"message": f"Cuenta creada correctamente para usuario {user.uid}"},
             status_code=201,

@@ -138,13 +138,9 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             )
 
             sendedEmail = send_email(
-                teacher_data["email"],
-                "Suscription Owned",
-                "newSuscription.html",
-                subscriptionId=session["subscription"],
-                renewDate=renewDate,
-                activeSus=activeSus,
-                urlInvoice=urlInvoice,
+             teacher_data["email"],
+            "Welcome to Loritos World – Get Started with Your Subscription!🌍",
+            "registeredAccount.html",
             )
 
             return JSONResponse(content=response_data_srv, status_code=200)
@@ -218,7 +214,7 @@ async def cancel_suscription(cancelSuscription: CancelSuscription):
 
                 sendedEmail = send_email(
                     teacher_data["email"],
-                    "Suscription Cancelled",
+                    "We’re Sorry to See You Go 😞",
                     "canceledSuscription.html",
                 )
 
@@ -356,6 +352,9 @@ async def free_subscribe_teacher(subscribe_teacher: SubscribeTeacher):
         if existing_subscription:
             raise HTTPException(status_code=400, detail="Ya existe una suscripción gratuita para este profesor")
 
+        teacher_doc = db.collection("tDash_teacherData").document(subscribe_teacher.teacherID).get()
+        teacher_data = teacher_doc.to_dict()
+        teacher_email = teacher_data.get("email")
         # Get the plan details from tDash_plans collection
         plan_doc = db.collection("tDash_plans").document(subscribe_teacher.planID).get()
         if not plan_doc.exists:
@@ -387,6 +386,11 @@ async def free_subscribe_teacher(subscribe_teacher: SubscribeTeacher):
         )
         subscription_ref.set(subscription_data)
 
+        sendedEmail = send_email(
+            teacher_email,
+            "Welcome to Loritos World – Get Started with Your Subscription!🌍",
+            "registeredAccount.html",
+        )
         # Update the hasSuscription value to True in tDash_teacherData collection
         teacher_ref = db.collection("tDash_teacherData").document(subscribe_teacher.teacherID)
         teacher_ref.update({"hasSuscription": True})
