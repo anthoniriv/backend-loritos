@@ -15,10 +15,6 @@ def is_email_verified(uid):
 
         return user.email_verified
 
-    except auth.AuthError as e:
-        print("Error de Firebase Auth:", e)
-        return False
-
     except Exception as e:
         print("Error:", e)
         return False
@@ -62,10 +58,6 @@ def send_email_verification(email):
             link=link,
         )
         return True
-
-    except auth.AuthError as e:
-        print("Error de Firebase Auth:", e)
-        return False
 
     except Exception as e:
         print("Error:", e)

@@ -34,4 +34,4 @@ stripe.api_key = "sk_test_51OWfnCE2m10pao8Wef972QeOaQwARpi6KttQreupbOlAJr88Wd8h7
 SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
 SMTP_USERNAME = "devteampe@gmail.com"
-SMTP_PASSWORD = "leaj tdaz vnfg teeb"
+SMTP_PASSWORD = "bdhy diwp vpid uopq"
