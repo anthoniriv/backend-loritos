@@ -504,105 +504,93 @@ async def get_credentials(idClass: IdClass):
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                     <title>Credentials</title>
                     <style>
-                        body {
-                            font-family: Arial, sans-serif;
-                            margin: 0;
-                            padding: 0;
-                        }
-                        .container {
-                            max-width: 600px;
-                            margin: 20px auto;
-                            background-color: #fff;
-                            border: solid 1px #545fdf;
-                            border-radius: 10px;
-                        }
-                        .top {
-                            background: #545fdf;
-                            padding: 17px 150px;
-                            border-radius: 10px;
-
-                        }
-                        .card {
-                            background: #f3f0ff;
-                            padding: 15px;
-                        }
-                        .divider {
-                            border-left: 2px solid #545fdf;
-                            height: 160px;
-                            margin-left: 10px;
-                            margin-right:10px;
-                        }
-                        h1 {
-                            color: #5b5b5b;
-                            text-align: left;
-                            font-size: 24px;
-                            font-weight: bold;
-                            margin-bottom: 10px;
-                        }
-                        p {
-                            color: #000000;
-                            margin-bottom: 10px;
-                            text-align: left;
-                            font-size: 18px;
-                            font-weight: bold;
-                        }
-                        .copyright {
-                            text-align: center;
-                            color: #ffffff;
-                            background: #545fdf;
-                            padding: 10px 0;
-                            border-radius: 10px;
-                        }
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #f5f5f5;
+                    }
+                    .container {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                    }
+                    .top {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        width: 100%;
+                        margin-bottom: 40px;
+                    }
+                    img {
+                        outline: none;
+                        text-decoration: none;
+                        -ms-interpolation-mode: bicubic;
+                        display: block;
+                        max-width: 266px;
+                        width: 100%;
+                        height: auto;
+                    }
+                    .stu,
+                    h1 {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        width: 100%;
+                    }
+                    .down {
+                        margin-top: 40px;
+                    }
                     </style>
                 </head>
                 <body>
                     <div class="container">
-                        <div class="top">
-                            <img
-                            align="center"
-                            border="0"
-                            src="https://i.ibb.co/WFqNZyD/logo.png"
-                            alt=""
-                            title=""
-                            style="
-                                margin: auto;
-                                outline: none;
-                                text-decoration: none;
-                                -ms-interpolation-mode: bicubic;
-                                clear: both;
-                                display: inline-block !important;
-                                border: none;
-                                height: auto;
-                                float: none;
-                                max-width: 266px;
-                            "
-                            width="266"
-                            />
-                        </div>
-                        <div class="card">
-                            <table width="100%">
-                                <tr>
-                                    <td>
-                                        <img src="https://i.ibb.co/tHDgxCm/bird.png" alt="Bird" width="100">
-                                    </td>
-                                    <td class="divider"></td>
-                                    <td>
-                                        <div>
-                                            <h1>Class {{ class_name }}</h1>
-                                            <p>User: {{ user }}</p>
-                                            <p>Pass: {{ password }}</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="copyright">
-                            <span>Copyright © All rights Reserverd Loritos World 2024</span>
-                        </div>
+                    <div class="top">
+                        <img
+                        align="center"
+                        border="0"
+                        src="https://www.loritosworld.com/wp-content/themes/loritos-world/assets/img/image-9.png"
+                        alt=""
+                        title=""
+                        style="
+                            outline: none;
+                            text-decoration: none;
+                            -ms-interpolation-mode: bicubic;
+                            clear: both;
+                            display: inline-block !important;
+                            border: none;
+                            height: auto;
+                            float: none;
+                            max-width: 366px;
+                        "
+                        width="366"
+                        />
+                    </div>
+                    <div class="mid">
+                        <p>
+                        Only students you want in this class should have access to this
+                        information:
+                        </p>
+                        <h1>Class Name {{ class_name }}</h1>
+                        <h2>USERNAME: {{ user }}</h2>
+                        <h2>PASSWORD: {{ password }}</h2>
+                    </div>
+                    <div class="down">
+                        <p class="stu">
+                        Students can only log in through a smartphone or tablet
+                        </p>
+                        <h4>
+                        1. Make sure you have the Loritos World app installed and open it up
+                        </h4>
+                        <h4>2. Press I Already Have An Account</h4>
+                        <h4>3. Type in your username and password and tap Sign In</h4>
+                    </div>
                     </div>
                 </body>
                 </html>

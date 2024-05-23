@@ -197,7 +197,7 @@ async def get_admin_data(admin_dataReq: SearchAdminSchema):
     """
     Get admin data.
     """
-    admin_id = admin_dataReq.teacherID
+    admin_id = admin_dataReq.adminID
     try:
         admin_ref = db.collection("tAdmin_users").document(admin_id)
         admin_doc = admin_ref.get()
