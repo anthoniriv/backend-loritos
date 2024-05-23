@@ -512,7 +512,6 @@ async def get_credentials(idClass: IdClass):
                         font-family: Arial, sans-serif;
                         margin: 0;
                         padding: 0;
-                        background-color: #f5f5f5;
                     }
                     .container {
                         display: flex;
@@ -536,6 +535,7 @@ async def get_credentials(idClass: IdClass):
                         max-width: 266px;
                         width: 100%;
                         height: auto;
+                        margin-left: 150px;
                     }
                     .stu,
                     h1 {
