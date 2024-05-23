@@ -228,17 +228,17 @@ async def del_acc_admin(admin_dataReq: SearchAdminSchema):
     """
     try:
         teacher_doc_ref = db.collection("tAdmin_users").document(
-            admin_dataReq.teacherID
+            admin_dataReq.adminID
         )
         teacher_doc = teacher_doc_ref.get()
 
         if not teacher_doc.exists:
             raise HTTPException(
                 status_code=404,
-                detail=f"No se encontró el profesor con ID {admin_dataReq.teacherID}",
+                detail=f"No se encontró el profesor con ID {admin_dataReq.adminID}",
             )
 
-        auth.delete_user(admin_dataReq.teacherID)
+        auth.delete_user(admin_dataReq.adminID)
 
         if teacher_doc.exists and teacher_doc.to_dict().get("email"):
             sent_email = send_email(
