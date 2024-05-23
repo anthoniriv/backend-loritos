@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from typing import Optional
 from config import db, stripe, firestore
-
 import stripe
 from datetime import datetime, timedelta
 from models import (
@@ -70,6 +69,13 @@ async def create_checkout_session(sessionCheckoutCreate: SessionCheckoutCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
+def convert_firestore_timestamps(data):
+    for key, value in data.items():
+        if isinstance(value, datetime):
+            data[key] = value.replace(microsecond=0).isoformat()
+        elif isinstance(value, dict):
+            data[key] = convert_firestore_timestamps(value)
+    return data
 
 @router.post("/check-stripe-session")
 async def stripe_session(sessionStripeCheck: SessionStripeCheck):
@@ -110,9 +116,11 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
             else:
                 subscription_data = {}
 
+            subscription_data = convert_firestore_timestamps(subscription_data)
+
             # Actualizar los datos del usuario en Firebase
             teacher_data_ref.update({"hasSuscription": True})
-
+            print('asdadwadawd222', subscription_data)
             response_data_srv = {
                 "success": "true",
                 "suscriptionId": session["subscription"],
@@ -121,7 +129,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 "status": session.status,
                 "subscriptionData": subscription_data,
             }
-
+            print('12ewdafwawf')
             subscription_data_ref = teacher_data_ref.collection(
                 "tDash_subscriptionData"
             ).document(docID)
@@ -136,7 +144,7 @@ async def stripe_session(sessionStripeCheck: SessionStripeCheck):
                 },
                 merge=True,
             )
-
+            print('awidqwdaif')
             sendedEmail = send_email(
              teacher_data["email"],
             "Welcome to Loritos World – Get Started with Your Subscription!🌍",
